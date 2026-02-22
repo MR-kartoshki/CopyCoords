@@ -18,11 +18,13 @@ public final class TelemetryBootstrap {
         try {
             TelemetryConfig cfg = TelemetryConfig.loadOrCreate();
             if (!cfg.enabled) {
+                System.out.println("CopyCoords: Telemetry not sent! (disabled)");
                 return;
             }
 
             final long now = System.currentTimeMillis();
             if (now - cfg.lastSent < RATE_LIMIT_MS) {
+                System.out.println("CopyCoords: Telemetry not sent! (rate limited)");
                 return;
             }
 
@@ -47,9 +49,14 @@ public final class TelemetryBootstrap {
                             cfg.save();
                         } catch (Exception ignored) {
                         }
+                        System.out.println("CopyCoords: Telemetry sent!");
                     })
-                    .exceptionally(ignored -> null);
-        } catch (Exception ignored) {
+                    .exceptionally(ex -> {
+                        System.out.println("CopyCoords: Telemetry not sent! (" + ex.getMessage() + ")");
+                        return null;
+                    });
+        } catch (Exception ex) {
+            System.out.println("CopyCoords: Telemetry not sent! (initialization error: " + ex.getMessage() + ")");
         }
     }
 }

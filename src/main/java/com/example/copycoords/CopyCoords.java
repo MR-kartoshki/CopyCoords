@@ -30,7 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 
-// Main mod class that initializes the mod and registers the /copycoords command
 public class CopyCoords implements ClientModInitializer {
     public static CopyCoordsConfig config;
     public static CopyCoordsDataStore dataStore;
@@ -39,7 +38,6 @@ public class CopyCoords implements ClientModInitializer {
     private static final String NETHER_ID = Level.NETHER.toString();
     private static final String END_ID = Level.END.toString();
 
-    // Initialize the mod client-side by loading config and registering commands/keybinds
     @Override
     @SuppressWarnings("null")
     public void onInitializeClient() {
@@ -47,22 +45,19 @@ public class CopyCoords implements ClientModInitializer {
         dataStore = CopyCoordsDataStore.load();
         TelemetryBootstrap.initAndMaybeSend();
         CopyCoordsBind.register();
-        // Register the /copycoords and /convertcoords commands with Brigadier
+
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             LiteralArgumentBuilder<FabricClientCommandSource> builder = ClientCommandManager.literal("copycoords");
             builder.executes(context -> executeCopyCoords(context));
 
-            // Register /convertcoords <goal> <pos>
             LiteralArgumentBuilder<FabricClientCommandSource> conv = ClientCommandManager.literal("convertcoords");
-            
-            // Suggest goal dimension values
+
             SuggestionProvider<FabricClientCommandSource> dimSuggestions = (ctx, sb) -> {
                 sb.suggest("overworld");
                 sb.suggest("nether");
                 return sb.buildFuture();
             };
 
-            // Coordinate suggestions: suggest common patterns
             SuggestionProvider<FabricClientCommandSource> coordSuggestions = (ctx, sb) -> {
                 String remaining = sb.getRemaining().toLowerCase();
                 if (remaining.isEmpty() || remaining.equals("~")) {
@@ -81,7 +76,6 @@ public class CopyCoords implements ClientModInitializer {
                 return sb.buildFuture();
             };
 
-            // Coordinates can use absolute numbers or ~ for relative (e.g., "100 64 200" or "~ ~ ~")
             RequiredArgumentBuilder<FabricClientCommandSource, String> coordArg = 
                 ClientCommandManager.argument("coordinates", StringArgumentType.greedyString())
                     .suggests(coordSuggestions)
@@ -96,7 +90,6 @@ public class CopyCoords implements ClientModInitializer {
             conv.then(goalArg);
             dispatcher.register(conv);
 
-            // Optional goal dimension for /copycoords
             RequiredArgumentBuilder<FabricClientCommandSource, String> copyGoalArg =
                 ClientCommandManager.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
@@ -104,13 +97,11 @@ public class CopyCoords implements ClientModInitializer {
             builder.then(copyGoalArg);
             dispatcher.register(builder);
 
-            // Alias: /cc -> /copycoords (shortcut requested in TODO)
             LiteralArgumentBuilder<FabricClientCommandSource> cc = ClientCommandManager.literal("cc");
             cc.executes(context -> executeCopyCoords(context));
             cc.then(copyGoalArg);
             dispatcher.register(cc);
 
-            // Register /msgcoords <player> [goal]
             LiteralArgumentBuilder<FabricClientCommandSource> msg = ClientCommandManager.literal("msgcoords");
             RequiredArgumentBuilder<FabricClientCommandSource, String> playerArg =
                 ClientCommandManager.argument("player", StringArgumentType.word())
@@ -125,7 +116,6 @@ public class CopyCoords implements ClientModInitializer {
             msg.then(playerArg);
             dispatcher.register(msg);
 
-                // Register /coordshistory
                 LiteralArgumentBuilder<FabricClientCommandSource> history = ClientCommandManager.literal("coordshistory");
                 history.executes(context -> executeHistoryList());
                 history.then(ClientCommandManager.literal("list")
@@ -137,7 +127,6 @@ public class CopyCoords implements ClientModInitializer {
                         .executes(context -> executeHistoryCopy(IntegerArgumentType.getInteger(context, "index")))));
                 dispatcher.register(history);
 
-                // Register /coordbookmark
                 LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommandManager.literal("coordbookmark");
                 bookmark.executes(context -> executeBookmarkList());
                 bookmark.then(ClientCommandManager.literal("list")
@@ -153,7 +142,7 @@ public class CopyCoords implements ClientModInitializer {
                     .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkRemove(StringArgumentType.getString(context, "name")))));
-                // export / import subcommands for bookmarks
+
                 bookmark.then(ClientCommandManager.literal("export")
                     .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
                         .executes(ctx -> executeBookmarkExport(StringArgumentType.getString(ctx, "file")))));
@@ -163,7 +152,6 @@ public class CopyCoords implements ClientModInitializer {
 
                 dispatcher.register(bookmark);
 
-                // Register /distcalc for calculating distance between two coordinate sets
                 LiteralArgumentBuilder<FabricClientCommandSource> distcalc = ClientCommandManager.literal("distcalc");
                 
                 RequiredArgumentBuilder<FabricClientCommandSource, Integer> x1Arg =
@@ -176,8 +164,7 @@ public class CopyCoords implements ClientModInitializer {
                                             .executes(context -> executeDistanceCalc(context)))))));
                 
                 distcalc.then(x1Arg);
-                
-                // Also allow /distcalc bookmarks <bookmark1> <bookmark2> format
+
                 RequiredArgumentBuilder<FabricClientCommandSource, String> bm1Arg =
                     ClientCommandManager.argument("bookmark1", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
@@ -192,26 +179,22 @@ public class CopyCoords implements ClientModInitializer {
         });
     }
 
-    // Execute the /copycoords command to get player coordinates
     private int executeCopyCoords(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
-        // Verify player is in game
+
         if (player == null) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
-        // Extract player's block coordinates
         int x = player.blockPosition().getX();
         int y = player.blockPosition().getY();
         int z = player.blockPosition().getZ();
         String dimensionId = getDimensionId(player);
         String coordString = formatCoordinates(x, y, z, dimensionId);
 
-        // Print coordinates to chat with clickable component
         postCoordinateMessage("Your current coordinates are: ", coordString, x, y, z, dimensionId);
 
-        // Copy to clipboard if enabled in config
         if (config.copyToClipboard) {
             copyToClipboardWithFeedback(coordString, x, y, z, dimensionId);
         }
@@ -219,7 +202,6 @@ public class CopyCoords implements ClientModInitializer {
         return Command.SINGLE_SUCCESS;
     }
 
-    // Execute /copycoords with a goal dimension to convert current coordinates
     private int executeCopyCoordsWithGoal(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
@@ -239,8 +221,7 @@ public class CopyCoords implements ClientModInitializer {
 
         String dimensionId = getDimensionIdForGoal(goal);
         String coordString = formatCoordinates(converted[0], converted[1], converted[2], dimensionId);
-        
-        // Display converted coordinates with clickable component
+
         int cx = (int) Math.floor(converted[0]);
         int cy = (int) Math.floor(converted[1]);
         int cz = (int) Math.floor(converted[2]);
@@ -253,7 +234,6 @@ public class CopyCoords implements ClientModInitializer {
         return Command.SINGLE_SUCCESS;
     }
 
-    // Execute the /convertcoords command
     private int executeConvertCoords(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
@@ -265,7 +245,6 @@ public class CopyCoords implements ClientModInitializer {
         
         double x, y, z;
 
-        // Try to get coordinates from the optional "coordinates" argument (supports ~ relative syntax)
         try {
             String coordInput = StringArgumentType.getString(context, "coordinates");
             String[] parts = coordInput.trim().split("\\s+");
@@ -274,7 +253,7 @@ public class CopyCoords implements ClientModInitializer {
             y = parseCoordinate(parts.length > 1 ? parts[1] : "~", player.getY());
             z = parseCoordinate(parts.length > 2 ? parts[2] : "~", player.getZ());
         } catch (Exception e) {
-            // If parsing fails, use player position
+
             x = Math.floor(player.getX());
             y = Math.floor(player.getY());
             z = Math.floor(player.getZ());
@@ -287,8 +266,7 @@ public class CopyCoords implements ClientModInitializer {
 
         String dimensionId = getDimensionIdForGoal(goal);
         String out = formatCoordinates(converted[0], converted[1], converted[2], dimensionId);
-        
-        // Display converted coordinates with clickable component
+
         int cx = (int) Math.floor(converted[0]);
         int cy = (int) Math.floor(converted[1]);
         int cz = (int) Math.floor(converted[2]);
@@ -301,7 +279,6 @@ public class CopyCoords implements ClientModInitializer {
         return Command.SINGLE_SUCCESS;
     }
 
-    // Execute /msgcoords <player> using current coordinates
     private int executeMsgCoords(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
@@ -318,7 +295,6 @@ public class CopyCoords implements ClientModInitializer {
         return sendCoordsMessage(target, coordString);
     }
 
-    // Execute /msgcoords <player> <goal> using converted coordinates
     private int executeMsgCoordsWithGoal(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
@@ -342,13 +318,12 @@ public class CopyCoords implements ClientModInitializer {
         return sendCoordsMessage(target, coordString);
     }
 
-    // Helper method to parse coordinate strings that support ~ for relative coordinates
     private static double parseCoordinate(String input, double playerCoord) {
         if (input.equals("~")) {
-            // Relative to player coordinate
+
             return playerCoord;
         } else if (input.startsWith("~")) {
-            // Relative with offset (e.g., ~10, ~-5)
+
             try {
                 double offset = Double.parseDouble(input.substring(1));
                 return playerCoord + offset;
@@ -356,7 +331,7 @@ public class CopyCoords implements ClientModInitializer {
                 return playerCoord;
             }
         } else {
-            // Absolute coordinate
+
             try {
                 return Double.parseDouble(input);
             } catch (NumberFormatException e) {
@@ -437,14 +412,12 @@ public class CopyCoords implements ClientModInitializer {
         return dimensionId;
     }
 
-    // Helper method to format coordinates with optional dimension and precision or custom template
     static String formatCoordinates(double x, double y, double z, String dimensionId) {
-        // template override takes precedence
+
         if (config != null && config.coordinateTemplate != null && !config.coordinateTemplate.isBlank()) {
             return applyTemplate(config.coordinateTemplate, x, y, z, dimensionId);
         }
 
-        // no decimal-precision option any more; just use default string conversion
         String xs = String.valueOf(x);
         String ys = String.valueOf(y);
         String zs = String.valueOf(z);
@@ -463,9 +436,8 @@ public class CopyCoords implements ClientModInitializer {
         return coordString;
     }
 
-    // Apply a custom template string, replacing placeholders with values.
-    // Supported placeholders: {x}, {y}, {z}, {dimension} and {dimName}.
-    // This is public so that configuration screens can generate a preview string.
+
+
     public static String applyTemplate(String template, double x, double y, double z, String dimensionId) {
         String result = template;
         result = result.replace("{x}", String.valueOf(x));
@@ -476,10 +448,9 @@ public class CopyCoords implements ClientModInitializer {
         return result;
     }
 
-    // Provide a simple preview for a template, using a canonical example coordinate set.
     public static String previewForTemplate(String template) {
         if (template == null || template.isBlank()) return "";
-        // use some arbitrary coordinate values and overworld
+
         return applyTemplate(template, 100, 64, 200, OVERWORLD_ID);
     }
 
@@ -489,16 +460,10 @@ public class CopyCoords implements ClientModInitializer {
         }
     }
 
-    /**
-     * Open the chat input screen prefilled with the given text.
-     * Uses reflection to handle both legacy (String) and modern
-     * (String, boolean) constructors; if neither is available it
-     * silently does nothing.
-     */
     public static void openChatWithText(String text) {
         Minecraft mc = Minecraft.getInstance();
         Class<?> cls = net.minecraft.client.gui.screens.ChatScreen.class;
-        // try constructor that accepts initial text directly
+
         try {
             try {
                 java.lang.reflect.Constructor<?> ctor = cls.getConstructor(String.class, boolean.class);
@@ -510,10 +475,9 @@ public class CopyCoords implements ClientModInitializer {
                 return;
             }
         } catch (Throwable ignored) {
-            // constructors with text unavailable, fall back to blank and reflection
+
         }
 
-        // fallback: open blank chat then insert text reflectively
         try {
             try {
                 java.lang.reflect.Constructor<?> ctor = cls.getConstructor(String.class, boolean.class);
@@ -883,7 +847,6 @@ public class CopyCoords implements ClientModInitializer {
         return null;
     }
 
-    // Execute /distcalc <x1> <y1> <z1> <x2> <y2> <z2> to calculate distance between two coordinate sets
     private int executeDistanceCalc(CommandContext<FabricClientCommandSource> context) {
         try {
             int x1 = IntegerArgumentType.getInteger(context, "x1");
@@ -894,8 +857,7 @@ public class CopyCoords implements ClientModInitializer {
             int z2 = IntegerArgumentType.getInteger(context, "z2");
 
             DistanceCalculator.DistanceResult result = DistanceCalculator.calculate(x1, y1, z1, x2, y2, z2);
-            
-            // Format and display result
+
             String message = "§6Distance Calculator§r: From [" + x1 + ", " + y1 + ", " + z1 + "] to [" + x2 + ", " + y2 + ", " + z2 + "]";
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));
             
@@ -909,7 +871,6 @@ public class CopyCoords implements ClientModInitializer {
         }
     }
 
-    // Execute /distcalc bookmarks <bookmark1> <bookmark2> to calculate distance between bookmarks
     private int executeDistanceCalcBookmarks(CommandContext<FabricClientCommandSource> context) {
         try {
             String bm1Name = StringArgumentType.getString(context, "bookmark1");
@@ -928,8 +889,7 @@ public class CopyCoords implements ClientModInitializer {
             }
             
             DistanceCalculator.DistanceResult result = DistanceCalculator.calculate(bm1.x, bm1.y, bm1.z, bm2.x, bm2.y, bm2.z);
-            
-            // Format and display result
+
             String message = "§6Distance Calculator§r: From '" + bm1Name + "' to '" + bm2Name + "'";
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));
             
@@ -946,7 +906,6 @@ public class CopyCoords implements ClientModInitializer {
         }
     }
 
-    // Helper method to parse coordinates that can be absolute numbers, ~, or player position
     private static int parseCoordOrPlayerCoord(String input, Player player, String coordType) {
         if (player == null) {
             throw new IllegalArgumentException("Player not found");
@@ -966,3 +925,4 @@ public class CopyCoords implements ClientModInitializer {
         return (int) Math.floor(parseCoordinate(input, playerCoord));
     }
 }
+

@@ -11,29 +11,26 @@ import net.minecraft.network.chat.Component;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
-// Integrates with Mod Menu to provide a GUI for mod configuration
 @Environment(EnvType.CLIENT)
 public class CopyCoordsModMenuIntegration implements ModMenuApi {
-    // Create and return the mod configuration GUI screen
+
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
         return parent -> {
-            // Load config if not already loaded
+
             if (CopyCoords.config == null) {
                 CopyCoords.config = CopyCoordsConfig.load();
             }
                         TelemetryConfig telemetryConfig = TelemetryConfig.loadOrCreate();
-            // Build the configuration GUI
+
             ConfigBuilder builder = ConfigBuilder.create()
                     .setParentScreen(parent)
                     .setTitle(Component.literal("CopyCoords Configuration"));
 
-            // Create General settings category
             ConfigCategory general = builder.getOrCreateCategory(Component.literal("General"));
 
             ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
-            // Add toggle option for clipboard copying feature
             general.addEntry(entryBuilder.startBooleanToggle(
                             Component.literal("Copy coordinates to clipboard"),
                             CopyCoords.config.copyToClipboard)
@@ -42,7 +39,6 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newValue -> CopyCoords.config.copyToClipboard = newValue)
                     .build());
 
-            // Add toggle option for copying converted coordinates
             general.addEntry(entryBuilder.startBooleanToggle(
                             Component.literal("Copy converted coordinates to clipboard"),
                             CopyCoords.config.copyConvertedToClipboard)
@@ -51,7 +47,6 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newValue -> CopyCoords.config.copyConvertedToClipboard = newValue)
                     .build());
 
-            // Add toggle option for showing dimension in coordinates
             general.addEntry(entryBuilder.startBooleanToggle(
                             Component.literal("Show dimension in coordinates"),
                             CopyCoords.config.showDimensionInCoordinates)
@@ -60,7 +55,6 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newValue -> CopyCoords.config.showDimensionInCoordinates = newValue)
                     .build());
 
-            // Add selector for coordinate format
             @SuppressWarnings("null")
             CoordinateFormat currentFormat = CoordinateFormat.fromId(CopyCoords.config.coordinateFormat);
             general.addEntry(entryBuilder.startSelector(
@@ -75,7 +69,6 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newFormat -> CopyCoords.config.coordinateFormat = newFormat.getId())
                     .build());
 
-            // custom template overrides the above formats; we show preview in the tooltip
             String initialPreview = CopyCoords.previewForTemplate(CopyCoords.config.coordinateTemplate);
             final Object[] templateEntryRef = new Object[1];
             Object templateEntryObj = entryBuilder.startStrField(
@@ -86,7 +79,7 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                             (initialPreview.isEmpty() ? "" : "\nPreview: " + initialPreview)))
                     .setSaveConsumer(newValue -> {
                         CopyCoords.config.coordinateTemplate = newValue;
-                        // attempt to update tooltip via reflection
+
                         try {
                             Object entry = templateEntryRef[0];
                             entry.getClass()
@@ -94,15 +87,13 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                                     .invoke(entry, Component.literal("Empty to use Coordinate format above. Placeholders: {x},{y},{z},{dimension},{dimName}" +
                                             (CopyCoords.previewForTemplate(newValue).isEmpty() ? "" : "\nPreview: " + CopyCoords.previewForTemplate(newValue))));
                         } catch (Throwable ignored) {
-                            // ignore; tooltip will be correct when screen reopened
+
                         }
                     })
                     .build();
             templateEntryRef[0] = templateEntryObj;
             general.addEntry((AbstractConfigListEntry<?>)templateEntryObj);
 
-
-            // Paste to chat input option
             general.addEntry(entryBuilder.startBooleanToggle(
                             Component.literal("Paste coordinates into chat input"),
                             CopyCoords.config.pasteToChatInput)
@@ -155,7 +146,6 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newValue -> telemetryConfig.enabled = newValue)
                     .build());
 
-            // Save config to file when changes are applied
             builder.setSavingRunnable(() -> {
                 CopyCoords.config.save();
                 telemetryConfig.save();
@@ -165,3 +155,4 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
         };
     }
 }
+

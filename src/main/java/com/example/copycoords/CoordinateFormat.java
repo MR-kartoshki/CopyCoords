@@ -1,6 +1,5 @@
 package com.example.copycoords;
 
-// Enum for different coordinate format options
 public enum CoordinateFormat {
     SPACE_SEPARATED("space", "100 64 200"),
     BRACKET_COMMA("bracket", "[100, 64, 200]"),
@@ -22,7 +21,6 @@ public enum CoordinateFormat {
         return example;
     }
 
-    // Format coordinates according to this format type
     public String format(int x, int y, int z) {
         return switch (this) {
             case SPACE_SEPARATED -> x + " " + y + " " + z;
@@ -31,7 +29,6 @@ public enum CoordinateFormat {
         };
     }
 
-    // Parse format ID and return the corresponding enum value
     public static CoordinateFormat fromId(String id) {
         for (CoordinateFormat format : values()) {
             if (format.id.equalsIgnoreCase(id)) {
@@ -41,3 +38,4 @@ public enum CoordinateFormat {
         return SPACE_SEPARATED; // Default fallback
     }
 }
+

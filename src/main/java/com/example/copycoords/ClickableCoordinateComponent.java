@@ -8,7 +8,6 @@ import net.minecraft.network.chat.HoverEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
-// Utility class to create clickable coordinate components in chat messages
 public class ClickableCoordinateComponent {
     
     /**
@@ -22,12 +21,10 @@ public class ClickableCoordinateComponent {
      */
     public static MutableComponent createClickableCoordinate(String coordString, int x, int y, int z, String dimensionId) {
         MutableComponent coord = Component.literal(coordString);
-        
-        // Create click and hover events using reflection (they're abstract classes)
+
         ClickEvent clickEvent = buildClickEvent(coordString);
         HoverEvent hoverEvent = buildHoverEvent(Component.literal("Click to copy coordinates"));
-        
-        // Apply both events to the style
+
         Style style = Style.EMPTY;
         if (clickEvent != null) {
             style = style.withClickEvent(clickEvent);
@@ -43,21 +40,19 @@ public class ClickableCoordinateComponent {
      * Creates a COPY_TO_CLIPBOARD click event using reflection
      */
     private static ClickEvent buildClickEvent(String coordString) {
-        // Try factory method first
+
         try {
             Method copyToClipboard = ClickEvent.class.getDeclaredMethod("copyToClipboard", String.class);
             return (ClickEvent) copyToClipboard.invoke(null, coordString);
         } catch (Exception ignored) {
         }
 
-        // Try CopyToClipboard inner class
         try {
             Class<?> copyToClipboardClass = Class.forName("net.minecraft.network.chat.ClickEvent$CopyToClipboard");
             return (ClickEvent) copyToClipboardClass.getConstructor(String.class).newInstance(coordString);
         } catch (Exception ignored) {
         }
 
-        // Try direct constructor as fallback
         try {
             Constructor<ClickEvent> ctor = ClickEvent.class.getConstructor(ClickEvent.Action.class, String.class);
             return ctor.newInstance(ClickEvent.Action.COPY_TO_CLIPBOARD, coordString);
@@ -71,21 +66,19 @@ public class ClickableCoordinateComponent {
      * Creates a SHOW_TEXT hover event using reflection
      */
     private static HoverEvent buildHoverEvent(Component text) {
-        // Try factory method first
+
         try {
             Method showText = HoverEvent.class.getDeclaredMethod("showText", Component.class);
             return (HoverEvent) showText.invoke(null, text);
         } catch (Exception ignored) {
         }
 
-        // Try ShowText inner class
         try {
             Class<?> showTextClass = Class.forName("net.minecraft.network.chat.HoverEvent$ShowText");
             return (HoverEvent) showTextClass.getConstructor(Component.class).newInstance(text);
         } catch (Exception ignored) {
         }
 
-        // Try direct constructor as fallback
         try {
             Constructor<HoverEvent> ctor = HoverEvent.class.getConstructor(HoverEvent.Action.class, Component.class);
             return ctor.newInstance(HoverEvent.Action.SHOW_TEXT, text);
@@ -111,3 +104,4 @@ public class ClickableCoordinateComponent {
         return message.append(clickable);
     }
 }
+

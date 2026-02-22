@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-// Stores coordinate history and bookmarks in a persistent JSON file
 public class CopyCoordsDataStore {
     private static final int HISTORY_LIMIT = 25;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -131,9 +130,6 @@ public class CopyCoordsDataStore {
         return names;
     }
 
-    /**
-     * Export current bookmarks to JSON file at given path. Returns true on success.
-     */
     public boolean exportBookmarks(Path out) {
         try {
             Files.createDirectories(out.getParent());
@@ -146,9 +142,6 @@ public class CopyCoordsDataStore {
         }
     }
 
-    /**
-     * Import bookmarks from JSON file; existing names are overwritten.
-     */
     public boolean importBookmarks(Path in) {
         if (!Files.exists(in)) {
             System.err.println("Import file not found: " + in);
@@ -205,3 +198,4 @@ public class CopyCoordsDataStore {
         }
     }
 }
+

@@ -2,6 +2,13 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.8.1] - 2026-02-23
+
+### Added
+- Support for Minecraft versions **1.20.5** and **1.20.6** (I forgor)
+- Telemetry now prints messages to the game log saying “Telemetry sent!” on success or “Telemetry not sent!” when it’s disabled, rate‑limited, or failed.
+- Added missing localization entries for the coordinate template UI and new options, all supported languages now contain them.
+
 ## [1.8.0] - 2026-02-21
 
 ### Added

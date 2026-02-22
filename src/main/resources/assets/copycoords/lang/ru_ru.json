@@ -10,6 +10,10 @@
   "option.copycoords.showDimensionInCoordinates": "Показывать измерение в координатах",
   "option.copycoords.showDimensionInCoordinates@Tooltip": "Если включено, при копировании координат будет показано измерение (Overworld, Nether, End).",
   "option.copycoords.coordinateFormat": "Формат координат",
+  "option.copycoords.coordinateTemplate": "Шаблон координат",
+  "option.copycoords.coordinateTemplate@Tooltip": "Введите пользовательский формат координат. Заполнители: {x}, {y}, {z}, {dimension}, {dimName}. Оставьте пустым, чтобы использовать выбранный выше формат. Просмотр отображается при редактировании.",
+  "option.copycoords.pasteToChatInput": "Вставлять координаты в чат",
+  "option.copycoords.pasteToChatInput@Tooltip": "Если включено, скопированные координаты будут помещены в поле ввода чата вместо отправки или копирования.",
   "option.copycoords.coordinateFormat@Tooltip": "Выберите способ отображения координат: Пробел (100 64 200), Скобки ([100, 64, 200]) или XYZ (X:100 Y:64 Z:200).",
 
   "message.copycoords.command.no_player": "Не удается прочитать позицию - игрок не загружен.",

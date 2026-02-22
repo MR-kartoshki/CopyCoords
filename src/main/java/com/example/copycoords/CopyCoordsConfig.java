@@ -9,15 +9,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-// Manages configuration settings for the mod, including clipboard copy preferences
 public class CopyCoordsConfig {
 
     public boolean copyToClipboard = true;
     public boolean copyConvertedToClipboard = true;
     public boolean showDimensionInCoordinates = true;
-    public boolean pasteToChatInput = false; // if true, paste coords into chat input instead of (or in addition to) clipboard
-    public String coordinateFormat = "space"; // "space", "bracket", or "xyz"
-    public String coordinateTemplate = ""; // optional custom format, overrides coordinateFormat when nonempty
+    public boolean pasteToChatInput = false;
+    public String coordinateFormat = "space";
+    public String coordinateTemplate = "";
     public boolean mapLinksEnabled = false;
     public String dynmapUrlTemplate = "http://localhost:8123/?world={world}&map=flat&x={x}&y={y}&z={z}";
     public String bluemapUrlTemplate = "http://localhost:8100/#world:{world}:{x}:{y}:{z}:150:0:0:0:0:perspective";
@@ -43,12 +42,10 @@ public class CopyCoordsConfig {
         return configDir.resolve("copycoords.json");
     }
 
-    // Load configuration from file or create default if not found
     public static CopyCoordsConfig load() {
         configPath = getScopedConfigPath();
         Path legacyPath = getLegacyConfigPath();
 
-        // Try to read existing config file
         Path readPath = Files.exists(configPath) ? configPath : legacyPath;
         if (Files.exists(readPath)) {
             try {
@@ -65,21 +62,19 @@ public class CopyCoordsConfig {
             }
         }
 
-        // Create and save default config if file doesn't exist
         CopyCoordsConfig config = new CopyCoordsConfig();
         config.save();
         return config;
     }
 
-    // Save current configuration to file
     public void save() {
         if (configPath == null) {
             configPath = getScopedConfigPath();
         }
         try {
-            // Ensure config directory exists before writing
+
             Files.createDirectories(configPath.getParent());
-            // Convert config object to JSON and write to file
+
             String json = GSON.toJson(this);
             Files.writeString(configPath, json);
         } catch (IOException e) {
@@ -87,3 +82,4 @@ public class CopyCoordsConfig {
         }
     }
 }
+

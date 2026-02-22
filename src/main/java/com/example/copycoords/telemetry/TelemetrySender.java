@@ -27,16 +27,24 @@ public final class TelemetrySender {
                     .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                     .build();
 
+            System.out.println("CopyCoords: Sending telemetry to " + endpoint);
             return CLIENT.sendAsync(request, HttpResponse.BodyHandlers.discarding())
                     .thenCompose(response -> {
                         int status = response.statusCode();
                         if (status >= 200 && status < 300) {
-                            return CompletableFuture.completedFuture(null);
+                            System.out.println("CopyCoords: Telemetry sent!");
+                            return CompletableFuture.<Void>completedFuture(null);
                         }
-                        return CompletableFuture.failedFuture(new RuntimeException("HTTP " + status));
+                        System.out.println("CopyCoords: Telemetry not sent! (HTTP " + status + ")");
+                        return CompletableFuture.<Void>failedFuture(new RuntimeException("HTTP " + status));
+                    })
+                    .exceptionally(ex -> {
+                        System.out.println("CopyCoords: Telemetry not sent! (" + ex.getMessage() + ")");
+                        return null;
                     });
         } catch (Exception exception) {
-            return CompletableFuture.failedFuture(exception);
+            System.out.println("CopyCoords: Telemetry not sent! (" + exception.getMessage() + ")");
+            return CompletableFuture.<Void>failedFuture(exception);
         }
     }
 }
