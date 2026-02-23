@@ -2,6 +2,17 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.9.1] - 2026-02.23
+
+### Fixed (warning: nerdy)
+- Telemetry version string could be wrong in development (the jar
+  metadata sometimes reports the IDE’s target or a long mapping identifier).
+  We now clean up the value from the `minecraft` mod container so the server
+  sees the real running game version.
+- Telemetry backend updated to use a synchronous sender with reusable
+  helpers, matching the implementation from MonkeyLib538 for consistency and
+  easier cross‑loader porting.
+
 ## [1.9.0] - 2026-02.23
 
 ### Added

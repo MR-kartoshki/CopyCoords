@@ -14,56 +14,56 @@ public final class TelemetryBootstrap {
     private TelemetryBootstrap() {
     }
 
+    /**
+     * Normal startup call; obeys configuration and rate‑limiting.
+     */
     public static void initAndMaybeSend() {
+        TelemetryConfig cfg = TelemetryConfig.loadOrCreate();
+        if (!cfg.enabled) {
+            System.out.println("CopyCoords: Telemetry not sent! (disabled)");
+            return;
+        }
+
+        final long now = System.currentTimeMillis();
+        if (now - cfg.lastSent < RATE_LIMIT_MS) {
+            System.out.println("CopyCoords: Telemetry not sent! (rate limited)");
+            return;
+        }
+
+        doSend(now);
+    }
+
+
+    private static void doSend(long now) {
+        String minecraftVersion = FabricLoader.getInstance()
+                .getModContainer("minecraft")
+                .map(mod -> mod.getMetadata().getVersion().getFriendlyString())
+                .map(v -> {
+                    // drop "minecraft-" prefix if present
+                    String cleaned = v;
+                    if (cleaned.startsWith("minecraft-")) {
+                        cleaned = cleaned.substring("minecraft-".length());
+                    }
+                    // cut off at first hyphen (removes mappings, flavours, etc.)
+                    int idx = cleaned.indexOf('-');
+                    if (idx != -1) cleaned = cleaned.substring(0, idx);
+                    return cleaned;
+                })
+                .orElse("unknown");
+        // log so we can verify in the game log which version was detected
+        System.out.println("CopyCoords: detected Minecraft version " + minecraftVersion);
+
+        JsonObject payload = TelemetrySender.createAnalyticsJson(
+                minecraftVersion, false, "fabric", new String[] {"copycoords"});
+
         try {
+            TelemetrySender.send(URI.create(ENDPOINT), payload);
             TelemetryConfig cfg = TelemetryConfig.loadOrCreate();
-            if (!cfg.enabled) {
-                System.out.println("CopyCoords: Telemetry not sent! (disabled)");
-                return;
-            }
-
-            final long now = System.currentTimeMillis();
-            if (now - cfg.lastSent < RATE_LIMIT_MS) {
-                System.out.println("CopyCoords: Telemetry not sent! (rate limited)");
-                return;
-            }
-
-            // `getModContainer("minecraft")` returns the version baked into the
-            // development jar, which in my workspace is always 1.21.11.  That means
-            // when running the mod against an older or newer game the telemetry
-            // payload would still claim 1.21.11.  The loader provides a direct
-            // getter for the *running* game version which is what we really want.
-                String minecraftVersion = FabricLoader.getInstance() 
-                    .getModContainer("minecraft") 
-                    .map(mod -> mod.getMetadata().getVersion().getFriendlyString()) 
-                    .orElse("unknown");
-            // log so we can verify in the game log which version was detected
-            System.out.println("CopyCoords: detected Minecraft version " + minecraftVersion);
-
-            JsonObject payload = new JsonObject();
-            payload.addProperty("mc", minecraftVersion);
-            payload.addProperty("e", "c");
-            payload.addProperty("l", "fabric");
-
-            JsonArray mods = new JsonArray();
-            mods.add("copycoords");
-            payload.add("m", mods);
-
-            TelemetrySender.send(URI.create(ENDPOINT), payload)
-                    .thenRun(() -> {
-                        try {
-                            cfg.lastSent = now;
-                            cfg.save();
-                        } catch (Exception ignored) {
-                        }
-                        System.out.println("CopyCoords: Telemetry sent!");
-                    })
-                    .exceptionally(ex -> {
-                        System.out.println("CopyCoords: Telemetry not sent! (" + ex.getMessage() + ")");
-                        return null;
-                    });
-        } catch (Exception ex) {
-            System.out.println("CopyCoords: Telemetry not sent! (initialization error: " + ex.getMessage() + ")");
+            cfg.lastSent = now;
+            cfg.save();
+            System.out.println("CopyCoords: Telemetry sent!");
+        } catch (Exception e) {
+            System.out.println("CopyCoords: Telemetry not sent! (" + e.getMessage() + ")");
         }
     }
 }
