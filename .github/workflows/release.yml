@@ -163,7 +163,8 @@ jobs:
             GAME_VERSIONS_JSON="$(jq -cn --arg mc "$MC_VERSION" '[$mc]')"
             FILE_PARTS_JSON='["file"]'
 
-            PAYLOAD="$(jq -cn \
+            PAYLOAD_FILE="$(mktemp)"
+            jq -cn \
               --arg project_id "$PROJECT_ID" \
               --arg name "$VERSION_NAME" \
               --arg version_number "$VERSION_NUMBER" \
@@ -182,7 +183,13 @@ jobs:
                 version_type: "release",
                 file_parts: $file_parts,
                 dependencies: $deps
-              }')"
+              }' > "$PAYLOAD_FILE"
+
+            if ! jq -e . "$PAYLOAD_FILE" > /dev/null; then
+              echo "::error::Generated Modrinth payload is invalid JSON for ${MC_VERSION}."
+              cat "$PAYLOAD_FILE" || true
+              exit 1
+            fi
 
             LOADERS_JSON='["fabric"]'
             LOADERS_ENC="$(printf '%s' "$LOADERS_JSON" | jq -sRr @uri)"
@@ -208,13 +215,15 @@ jobs:
             echo "Uploading ${PRIMARY_JAR} for game version ${MC_VERSION} as ${VERSION_NUMBER}"
             UPLOAD_STATUS="$(curl -sS -o /tmp/modrinth-upload.json -w "%{http_code}" -X POST "https://api.modrinth.com/v2/version" \
               -H "Authorization: ${MODRINTH_TOKEN}" \
-              -F "data=${PAYLOAD};type=application/json" \
+              -F "data=@${PAYLOAD_FILE};type=application/json" \
               -F "file=@${PRIMARY_JAR}")"
             if [[ "$UPLOAD_STATUS" != "200" && "$UPLOAD_STATUS" != "201" ]]; then
               echo "::error::Modrinth upload failed for ${MC_VERSION} with HTTP ${UPLOAD_STATUS}."
               cat /tmp/modrinth-upload.json || true
+              rm -f "$PAYLOAD_FILE"
               exit 1
             fi
+            rm -f "$PAYLOAD_FILE"
           done
   github-release:
     concurrency:
