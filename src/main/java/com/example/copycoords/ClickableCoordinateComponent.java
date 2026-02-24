@@ -5,8 +5,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.HoverEvent;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 
 public class ClickableCoordinateComponent {
     
@@ -36,56 +34,12 @@ public class ClickableCoordinateComponent {
         return coord.withStyle(style);
     }
 
-    /**
-     * Creates a COPY_TO_CLIPBOARD click event using reflection
-     */
     private static ClickEvent buildClickEvent(String coordString) {
-
-        try {
-            Method copyToClipboard = ClickEvent.class.getDeclaredMethod("copyToClipboard", String.class);
-            return (ClickEvent) copyToClipboard.invoke(null, coordString);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Class<?> copyToClipboardClass = Class.forName("net.minecraft.network.chat.ClickEvent$CopyToClipboard");
-            return (ClickEvent) copyToClipboardClass.getConstructor(String.class).newInstance(coordString);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Constructor<ClickEvent> ctor = ClickEvent.class.getConstructor(ClickEvent.Action.class, String.class);
-            return ctor.newInstance(ClickEvent.Action.COPY_TO_CLIPBOARD, coordString);
-        } catch (Exception ignored) {
-        }
-
-        return null;
+        return ChatEventFactory.copyToClipboard(coordString);
     }
 
-    /**
-     * Creates a SHOW_TEXT hover event using reflection
-     */
     private static HoverEvent buildHoverEvent(Component text) {
-
-        try {
-            Method showText = HoverEvent.class.getDeclaredMethod("showText", Component.class);
-            return (HoverEvent) showText.invoke(null, text);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Class<?> showTextClass = Class.forName("net.minecraft.network.chat.HoverEvent$ShowText");
-            return (HoverEvent) showTextClass.getConstructor(Component.class).newInstance(text);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Constructor<HoverEvent> ctor = HoverEvent.class.getConstructor(HoverEvent.Action.class, Component.class);
-            return ctor.newInstance(HoverEvent.Action.SHOW_TEXT, text);
-        } catch (Exception ignored) {
-        }
-
-        return null;
+        return ChatEventFactory.showText(text);
     }
 
     /**

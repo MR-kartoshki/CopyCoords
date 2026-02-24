@@ -94,7 +94,7 @@ public class CopyCoordsDataStore {
         save();
     }
 
-    public boolean addBookmark(String name, int x, int y, int z, String dimensionId) {
+    public boolean addBookmark(String name, double x, double y, double z, String dimensionId) {
         String key = normalizeName(name);
         if (bookmarks.containsKey(key)) {
             return false;
@@ -184,12 +184,12 @@ public class CopyCoordsDataStore {
 
     public static class BookmarkEntry {
         public String name;
-        public int x;
-        public int y;
-        public int z;
+        public double x;
+        public double y;
+        public double z;
         public String dimensionId;
 
-        public BookmarkEntry(String name, int x, int y, int z, String dimensionId) {
+        public BookmarkEntry(String name, double x, double y, double z, String dimensionId) {
             this.name = name;
             this.x = x;
             this.y = y;

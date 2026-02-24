@@ -23,8 +23,6 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -140,11 +138,11 @@ public class CopyCoords implements ClientModInitializer {
                     .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
                         .executes(context -> executeBookmarkAdd(StringArgumentType.getString(context, "name")))));
                 bookmark.then(ClientCommandManager.literal("copy")
-                    .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
+                    .then(ClientCommandManager.argument("name", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkCopy(StringArgumentType.getString(context, "name")))));
                 bookmark.then(ClientCommandManager.literal("remove")
-                    .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
+                    .then(ClientCommandManager.argument("name", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkRemove(StringArgumentType.getString(context, "name")))));
 
@@ -258,17 +256,20 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
 
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
+        int ix = (int) Math.floor(x);
+        int iy = (int) Math.floor(y);
+        int iz = (int) Math.floor(z);
         String dimensionId = getDimensionId(player);
         String coordString = formatCoordinates(x, y, z, dimensionId);
 
-        postCoordinateMessage("Your current coordinates are: ", coordString, x, y, z, dimensionId);
+        postCoordinateMessage("Your current coordinates are: ", coordString, ix, iy, iz, dimensionId);
         maybeInstantSendCommandOutput(coordString);
 
         if (config.copyToClipboard) {
-            copyToClipboardWithFeedback(coordString, x, y, z, dimensionId);
+            copyToClipboardWithFeedback(coordString, ix, iy, iz, dimensionId);
         }
 
         return Command.SINGLE_SUCCESS;
@@ -282,9 +283,9 @@ public class CopyCoords implements ClientModInitializer {
         }
 
         String goal = StringArgumentType.getString(context, "goal").toLowerCase();
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
 
         double[] converted = convertCurrentCoordsToGoal(player, goal, x, y, z);
         if (converted == null) {
@@ -360,9 +361,9 @@ public class CopyCoords implements ClientModInitializer {
         }
 
         String target = StringArgumentType.getString(context, "player");
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
         String coordString = x + " " + y + " " + z;
 
         return sendCoordsMessage(target, coordString);
@@ -377,9 +378,9 @@ public class CopyCoords implements ClientModInitializer {
 
         String target = StringArgumentType.getString(context, "player");
         String goal = StringArgumentType.getString(context, "goal").toLowerCase();
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
 
         double[] converted = convertCurrentCoordsToGoal(player, goal, x, y, z);
         if (converted == null) {
@@ -448,7 +449,6 @@ public class CopyCoords implements ClientModInitializer {
 
         try {
             connection.sendCommand("msg " + target + " " + coordString);
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.msg_sent", target, coordString));
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
             String errorMsg = e.getMessage();
@@ -535,42 +535,10 @@ public class CopyCoords implements ClientModInitializer {
 
     public static void openChatWithText(String text) {
         Minecraft mc = Minecraft.getInstance();
-        Class<?> cls = net.minecraft.client.gui.screens.ChatScreen.class;
-
-        try {
-            try {
-                java.lang.reflect.Constructor<?> ctor = cls.getConstructor(String.class, boolean.class);
-                mc.setScreen((net.minecraft.client.gui.screens.Screen) ctor.newInstance(text, false));
-                return;
-            } catch (Throwable t) {
-                java.lang.reflect.Constructor<?> ctor = cls.getConstructor(String.class);
-                mc.setScreen((net.minecraft.client.gui.screens.Screen) ctor.newInstance(text));
-                return;
-            }
-        } catch (Throwable ignored) {
-
+        if (mc == null) {
+            return;
         }
-
-        try {
-            try {
-                java.lang.reflect.Constructor<?> ctor = cls.getConstructor(String.class, boolean.class);
-                mc.setScreen((net.minecraft.client.gui.screens.Screen) ctor.newInstance("", false));
-            } catch (Throwable t) {
-                java.lang.reflect.Constructor<?> ctor = cls.getConstructor(String.class);
-                mc.setScreen((net.minecraft.client.gui.screens.Screen) ctor.newInstance(""));
-            }
-        } catch (Throwable ignored) {
-        }
-
-        if (mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen) {
-            try {
-                Class<?> csClass = mc.screen.getClass();
-                java.lang.reflect.Method m = csClass.getDeclaredMethod("insertText", String.class, boolean.class);
-                m.setAccessible(true);
-                m.invoke(mc.screen, text, false);
-            } catch (Throwable ignored) {
-            }
-        }
+        ChatScreenOpener.open(mc, text);
     }
 
     private void copyToClipboardWithFeedback(String text, int x, int y, int z, String dimensionId) {
@@ -659,9 +627,9 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
 
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
         String dimensionId = getDimensionId(player);
 
         if (!dataStore.addBookmark(trimmed, x, y, z, dimensionId)) {
@@ -683,12 +651,16 @@ public class CopyCoords implements ClientModInitializer {
         Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmarks (click to copy):"));
         for (CopyCoordsDataStore.BookmarkEntry entry : bookmarks) {
             String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
-            String command = "/coordbookmark copy " + quoteArgument(entry.name);
+            String command = "/coordbookmark copy " + quoteForBrigadier(entry.name);
                         ClickEvent clickEvent = buildClickEvent(command);
                         HoverEvent hoverEvent = buildHoverEvent(Component.literal("Copy to clipboard"));
                         net.minecraft.network.chat.MutableComponent line = Component.literal(entry.name + " - " + coordString)
                             .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
-                        appendMapLinks(line, entry.x, entry.y, entry.z, entry.dimensionId);
+                        appendMapLinks(line,
+                                (int) Math.floor(entry.x),
+                                (int) Math.floor(entry.y),
+                                (int) Math.floor(entry.z),
+                                entry.dimensionId);
             Minecraft.getInstance().gui.getChat().addMessage(line);
         }
 
@@ -706,7 +678,11 @@ public class CopyCoords implements ClientModInitializer {
         try {
             ClipboardUtils.copyToClipboard(coordString);
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Copied bookmark '" + entry.name + "' to clipboard."));
-            addHistoryEntry(entry.x, entry.y, entry.z, entry.dimensionId);
+            addHistoryEntry(
+                    (int) Math.floor(entry.x),
+                    (int) Math.floor(entry.y),
+                    (int) Math.floor(entry.z),
+                    entry.dimensionId);
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
             String errorMsg = e.getMessage();
@@ -756,14 +732,6 @@ public class CopyCoords implements ClientModInitializer {
         return 0;
     }
 
-    private String quoteArgument(String value) {
-        String escaped = value.replace("\"", "\\\"");
-        if (escaped.contains(" ")) {
-            return "\"" + escaped + "\"";
-        }
-        return escaped;
-    }
-
     private static String quoteForBrigadier(String value) {
         String escaped = value.replace("\\", "\\\\").replace("\"", "\\\"");
         return "\"" + escaped + "\"";
@@ -782,47 +750,11 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private static ClickEvent buildClickEvent(String command) {
-        try {
-            Method runCommand = ClickEvent.class.getDeclaredMethod("runCommand", String.class);
-            return (ClickEvent) runCommand.invoke(null, command);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Class<?> runCommandClass = Class.forName("net.minecraft.network.chat.ClickEvent$RunCommand");
-            return (ClickEvent) runCommandClass.getConstructor(String.class).newInstance(command);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Constructor<ClickEvent> ctor = ClickEvent.class.getConstructor(ClickEvent.Action.class, String.class);
-            return ctor.newInstance(ClickEvent.Action.RUN_COMMAND, command);
-        } catch (Exception ignored) {
-        }
-
-        return null;
+        return ChatEventFactory.runCommand(command);
     }
 
     private static HoverEvent buildHoverEvent(Component text) {
-        try {
-            Method showText = HoverEvent.class.getDeclaredMethod("showText", Component.class);
-            return (HoverEvent) showText.invoke(null, text);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Class<?> showTextClass = Class.forName("net.minecraft.network.chat.HoverEvent$ShowText");
-            return (HoverEvent) showTextClass.getConstructor(Component.class).newInstance(text);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Constructor<HoverEvent> ctor = HoverEvent.class.getConstructor(HoverEvent.Action.class, Component.class);
-            return ctor.newInstance(HoverEvent.Action.SHOW_TEXT, text);
-        } catch (Exception ignored) {
-        }
-
-        return null;
+        return ChatEventFactory.showText(text);
     }
 
     private void postCoordinateMessage(String prefix, String coordString, int x, int y, int z, String dimensionId) {
@@ -899,25 +831,7 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private static ClickEvent buildOpenUrlClickEvent(String url) {
-        try {
-            Method openUrl = ClickEvent.class.getDeclaredMethod("openUrl", String.class);
-            return (ClickEvent) openUrl.invoke(null, url);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Class<?> openUrlClass = Class.forName("net.minecraft.network.chat.ClickEvent$OpenUrl");
-            return (ClickEvent) openUrlClass.getConstructor(String.class).newInstance(url);
-        } catch (Exception ignored) {
-        }
-
-        try {
-            Constructor<ClickEvent> ctor = ClickEvent.class.getConstructor(ClickEvent.Action.class, String.class);
-            return ctor.newInstance(ClickEvent.Action.OPEN_URL, url);
-        } catch (Exception ignored) {
-        }
-
-        return null;
+        return ChatEventFactory.openUrl(url);
     }
 
     private int executeDistanceCalc(CommandContext<FabricClientCommandSource> context) {
@@ -961,7 +875,13 @@ public class CopyCoords implements ClientModInitializer {
                 return 0;
             }
             
-            DistanceCalculator.DistanceResult result = DistanceCalculator.calculate(bm1.x, bm1.y, bm1.z, bm2.x, bm2.y, bm2.z);
+            DistanceCalculator.DistanceResult result = DistanceCalculator.calculate(
+                    (int) Math.floor(bm1.x),
+                    (int) Math.floor(bm1.y),
+                    (int) Math.floor(bm1.z),
+                    (int) Math.floor(bm2.x),
+                    (int) Math.floor(bm2.y),
+                    (int) Math.floor(bm2.z));
 
             String message = "§6Distance Calculator§r: From '" + bm1Name + "' to '" + bm2Name + "'";
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));

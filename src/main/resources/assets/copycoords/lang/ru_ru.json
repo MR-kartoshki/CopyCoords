@@ -27,10 +27,8 @@
   "message.copycoords.keybind.copied_converted": "Преобразованные координаты скопированы в буфер обмена: %s",
   "message.copycoords.keybind.copied_with_dimension": "Координаты с измерением скопированы в буфер обмена: %s",
   "message.copycoords.keybind.failed": "Ошибка при копировании координат в буфер обмена: %s",
-  "message.copycoords.keybind.sent_chat": "Координаты отправлены в чат: ",
   "message.copycoords.command.converted": "Преобразованные координаты: %s",
   "message.copycoords.command.unknown_goal": "Неизвестное целевое измерение: %s (используйте overworld или nether)",
   "message.copycoords.command.unsupported_dimension": "Не удается преобразовать координаты в этом измерении (поддерживаются только Overworld и Nether).",
-  "message.copycoords.command.msg_sent": "Координаты отправлены %s: %s",
   "message.copycoords.command.msg_failed": "Ошибка при отправке координат %s: %s"
 }

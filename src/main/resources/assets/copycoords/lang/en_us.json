@@ -26,7 +26,6 @@
   "message.copycoords.keybind.copied_converted": "Copied converted coordinates to clipboard: %s",
   "message.copycoords.keybind.copied_with_dimension": "Copied coordinates with dimension to clipboard: %s",
   "message.copycoords.keybind.failed": "Failed to copy coordinates to clipboard: %s",
-  "message.copycoords.keybind.sent_chat": "Sent coordinates to chat: ",
   "message.copycoords.command.converted": "Converted coordinates: %s",
   "message.copycoords.command.unknown_goal": "Unknown goal dimension: %s (use overworld or nether)",
   "message.copycoords.command.unsupported_dimension": "Cannot convert coordinates in this dimension (only Overworld and Nether are supported).",
@@ -34,6 +33,5 @@
   "message.copycoords.bookmark.export_failed": "Failed to export bookmarks: %s",
   "message.copycoords.bookmark.imported": "Bookmarks imported from %s",
   "message.copycoords.bookmark.import_failed": "Failed to import bookmarks: %s",
-  "message.copycoords.command.msg_sent": "Sent coordinates to %s: %s",
   "message.copycoords.command.msg_failed": "Failed to send coordinates to %s: %s"
 }

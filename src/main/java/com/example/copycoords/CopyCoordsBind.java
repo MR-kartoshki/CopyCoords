@@ -72,9 +72,12 @@ public class CopyCoordsBind {
             return;
         }
 
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
+        int ix = (int) Math.floor(x);
+        int iy = (int) Math.floor(y);
+        int iz = (int) Math.floor(z);
 
         String dimensionId = CopyCoords.getDimensionId(player);
         String coordString = CopyCoords.formatCoordinates(x, y, z, dimensionId);
@@ -85,13 +88,13 @@ public class CopyCoordsBind {
                     CopyCoords.openChatWithText(coordString);
                 } catch (Throwable t) {
                     ClipboardUtils.copyToClipboard(coordString);
-                    minecraft.gui.getChat().addMessage(CopyCoords.buildCoordinateMessage("Copied coordinates to clipboard: ", coordString, x, y, z, dimensionId));
+                    minecraft.gui.getChat().addMessage(CopyCoords.buildCoordinateMessage("Copied coordinates to clipboard: ", coordString, ix, iy, iz, dimensionId));
                 }
             } else {
                 ClipboardUtils.copyToClipboard(coordString);
-                minecraft.gui.getChat().addMessage(CopyCoords.buildCoordinateMessage("Copied coordinates to clipboard: ", coordString, x, y, z, dimensionId));
+                minecraft.gui.getChat().addMessage(CopyCoords.buildCoordinateMessage("Copied coordinates to clipboard: ", coordString, ix, iy, iz, dimensionId));
             }
-            CopyCoords.addHistoryEntry(x, y, z, dimensionId);
+            CopyCoords.addHistoryEntry(ix, iy, iz, dimensionId);
         } catch (Exception e) {
             String errorMsg = e.getMessage();
             if (errorMsg == null || errorMsg.isEmpty()) {
@@ -204,23 +207,19 @@ public class CopyCoordsBind {
             return;
         }
 
-        int x = player.blockPosition().getX();
-        int y = player.blockPosition().getY();
-        int z = player.blockPosition().getZ();
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
+        int ix = (int) Math.floor(x);
+        int iy = (int) Math.floor(y);
+        int iz = (int) Math.floor(z);
 
         String dimensionId = CopyCoords.getDimensionId(player);
         String coordString = CopyCoords.formatCoordinates(x, y, z, dimensionId);
 
         try {
             if (CopyCoords.sendCommandOutputToChat(coordString, true)) {
-                minecraft.gui.getChat().addMessage(CopyCoords.buildCoordinateMessage(
-                        net.minecraft.network.chat.Component.translatable("message.copycoords.keybind.sent_chat").getString(),
-                        coordString,
-                        x,
-                        y,
-                        z,
-                        dimensionId));
-                CopyCoords.addHistoryEntry(x, y, z, dimensionId);
+                CopyCoords.addHistoryEntry(ix, iy, iz, dimensionId);
             }
         } catch (Exception e) {
             String errorMsg = e.getMessage();

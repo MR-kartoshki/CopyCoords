@@ -2,6 +2,17 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.10.2] - 2026-02-24
+
+### Fixed
+- `/copycoords`, `/msgcoords`, and instant-send keybind coordinate output now uses live player position (`getX/getY/getZ`) instead of block-position integers.
+- Removed local `"Sent coordinates to chat:"` output for the instant-send keybind.
+- Removed local `/msgcoords` success echo (`"Sent coordinates to %s: %s"`).
+- `coordbookmark list` clickable copy entries now execute reliably, including bookmark names with spaces/quotes.
+
+### Changed
+- `coordbookmark add` now stores decimal coordinates.
+
 ## [1.10.1] - 2026-02-24
 
 ### Fixed

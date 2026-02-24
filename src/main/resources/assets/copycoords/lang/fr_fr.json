@@ -26,10 +26,8 @@
   "message.copycoords.keybind.copied_converted": "Coordonnées converties copiées dans le presse-papiers : %s",
   "message.copycoords.keybind.copied_with_dimension": "Coordonnées avec dimension copiées dans le presse-papiers : %s",
   "message.copycoords.keybind.failed": "Échec de la copie des coordonnées dans le presse-papiers : %s",
-  "message.copycoords.keybind.sent_chat": "Coordonnées envoyées dans le chat : ",
   "message.copycoords.command.converted": "Coordonnées converties : %s",
   "message.copycoords.command.unknown_goal": "Dimension cible inconnue : %s (utilisez overworld ou nether)",
   "message.copycoords.command.unsupported_dimension": "Impossible de convertir les coordonnées dans cette dimension (seul l'Overworld et le Nether sont pris en charge).",
-  "message.copycoords.command.msg_sent": "Coordonnées envoyées à %s : %s",
   "message.copycoords.command.msg_failed": "Échec de l'envoi des coordonnées à %s : %s"
 }
