@@ -57,8 +57,12 @@ Main options:
 - `pasteToChatInput`
 - `instantChatEnabled` (when enabled, `/cc` and `/copycoords` also send output to server chat)
 - `coordinateFormat` (`space`, `bracket`, `xyz`)
+- `decimalPlaces` (`0-10`, default `2`)
+  - Controls how many digits are shown after the decimal point.
+  - Trailing zeros are always shown (for example, `100.00` when set to `2`).
 - `coordinateTemplate` (custom format string, overrides `coordinateFormat` when non‑empty)
-  - You can use placeholders `{x}`, `{y}`, `{z}`, `{dimension}`, and `{dimName}`.  
+  - You can use placeholders `{x}`, `{y}`, `{z}`, `{dimension}`, and `{dimName}`.
+  - `{x}`, `{y}`, and `{z}` respect `decimalPlaces`.
   - A live preview appears in the template field's tooltip as you edit.
 - `Instant Chat Send` keybind (configurable in Controls, always sends current coordinates to server chat regardless of `instantChatEnabled`)
 
