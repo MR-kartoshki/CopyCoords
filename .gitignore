@@ -8,6 +8,7 @@ versions/*/build/
 versions/*/bin/
 versions/*/run/
 /tmp/
+.gradle-local/
 
 # IDE
 .idea/

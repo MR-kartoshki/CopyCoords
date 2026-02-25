@@ -12,6 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class CopyCoordsConfig {
+    public static final int MIN_DECIMAL_PLACES = 0;
+    public static final int MAX_DECIMAL_PLACES = 10;
+    public static final int DEFAULT_DECIMAL_PLACES = 2;
 
     public boolean copyToClipboard = true;
     public boolean copyConvertedToClipboard = true;
@@ -20,6 +23,7 @@ public class CopyCoordsConfig {
     public boolean instantChatEnabled = false;
     public boolean pasteToChatInput = false;
     public String coordinateFormat = "space";
+    public int decimalPlaces = DEFAULT_DECIMAL_PLACES;
     public String coordinateTemplate = "";
     public boolean mapLinksEnabled = false;
     public String dynmapUrlTemplate = "http://localhost:8123/?world={world}&map=flat&x={x}&y={y}&z={z}";
@@ -65,6 +69,11 @@ public class CopyCoordsConfig {
                     if (raw == null || !raw.has("instantChatEnabled")) {
                         config.instantChatEnabled = true;
                     }
+                    if (raw == null || !raw.has("decimalPlaces")) {
+                        config.decimalPlaces = DEFAULT_DECIMAL_PLACES;
+                    } else {
+                        config.decimalPlaces = clampDecimalPlaces(config.decimalPlaces);
+                    }
                     if (!configPath.equals(readPath)) {
                         config.save();
                     }
@@ -78,6 +87,10 @@ public class CopyCoordsConfig {
         CopyCoordsConfig config = new CopyCoordsConfig();
         config.save();
         return config;
+    }
+
+    public static int clampDecimalPlaces(int decimalPlaces) {
+        return Math.max(MIN_DECIMAL_PLACES, Math.min(MAX_DECIMAL_PLACES, decimalPlaces));
     }
 
     public void save() {

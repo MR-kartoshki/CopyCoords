@@ -69,6 +69,16 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newFormat -> CopyCoords.config.coordinateFormat = newFormat.getId())
                     .build());
 
+            general.addEntry(entryBuilder.startIntSlider(
+                            Component.literal("Decimal places"),
+                            CopyCoords.config.decimalPlaces,
+                            CopyCoordsConfig.MIN_DECIMAL_PLACES,
+                            CopyCoordsConfig.MAX_DECIMAL_PLACES)
+                    .setDefaultValue(CopyCoordsConfig.DEFAULT_DECIMAL_PLACES)
+                    .setTooltip(Component.literal("How many digits to show after the decimal point in coordinates (0-10). Trailing zeros are always shown."))
+                    .setSaveConsumer(newValue -> CopyCoords.config.decimalPlaces = CopyCoordsConfig.clampDecimalPlaces(newValue))
+                    .build());
+
             String initialPreview = CopyCoords.previewForTemplate(CopyCoords.config.coordinateTemplate);
             final Object[] templateEntryRef = new Object[1];
             Object templateEntryObj = entryBuilder.startStrField(

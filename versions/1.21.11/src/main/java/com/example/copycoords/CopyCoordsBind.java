@@ -177,8 +177,10 @@ public class CopyCoordsBind {
 
         String dimensionId = CopyCoords.getDimensionId(player);
 
-        CoordinateFormat format = CoordinateFormat.fromId(CopyCoords.config.coordinateFormat);
-        String coordString = format.format(x, y, z) + " (" + CopyCoords.getDimensionNameFromId(dimensionId) + ")";
+        String coordString = CopyCoords.formatCoordinates(x, y, z, dimensionId);
+        if (CopyCoords.config == null || !CopyCoords.config.showDimensionInCoordinates) {
+            coordString += " (" + CopyCoords.getDimensionNameFromId(dimensionId) + ")";
+        }
 
         try {
             if (CopyCoords.config != null && CopyCoords.config.pasteToChatInput) {

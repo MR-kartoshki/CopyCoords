@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 
 public class CopyCoords implements ClientModInitializer {
     public static CopyCoordsConfig config;
@@ -364,7 +365,7 @@ public class CopyCoords implements ClientModInitializer {
         double x = player.getX();
         double y = player.getY();
         double z = player.getZ();
-        String coordString = x + " " + y + " " + z;
+        String coordString = formatCoordinateValue(x) + " " + formatCoordinateValue(y) + " " + formatCoordinateValue(z);
 
         return sendCoordsMessage(target, coordString);
     }
@@ -486,16 +487,18 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     static String formatCoordinates(double x, double y, double z, String dimensionId) {
-
-        if (config != null && config.coordinateTemplate != null && !config.coordinateTemplate.isBlank()) {
-            return applyTemplate(config.coordinateTemplate, x, y, z, dimensionId);
+        CopyCoordsConfig currentConfig = config;
+        if (currentConfig != null && currentConfig.coordinateTemplate != null && !currentConfig.coordinateTemplate.isBlank()) {
+            return applyTemplate(currentConfig.coordinateTemplate, x, y, z, dimensionId);
         }
 
-        String xs = String.valueOf(x);
-        String ys = String.valueOf(y);
-        String zs = String.valueOf(z);
+        String xs = formatCoordinateValue(x);
+        String ys = formatCoordinateValue(y);
+        String zs = formatCoordinateValue(z);
 
-        CoordinateFormat format = CoordinateFormat.fromId(CopyCoords.config.coordinateFormat);
+        CoordinateFormat format = currentConfig == null
+                ? CoordinateFormat.SPACE_SEPARATED
+                : CoordinateFormat.fromId(currentConfig.coordinateFormat);
         String coordString;
         switch (format) {
             case SPACE_SEPARATED -> coordString = xs + " " + ys + " " + zs;
@@ -503,19 +506,31 @@ public class CopyCoords implements ClientModInitializer {
             case XYZ_LABEL -> coordString = "X:" + xs + " Y:" + ys + " Z:" + zs;
             default -> coordString = xs + " " + ys + " " + zs;
         }
-        if (CopyCoords.config.showDimensionInCoordinates) {
+        if (currentConfig != null && currentConfig.showDimensionInCoordinates) {
             coordString += " (" + getDimensionNameFromId(dimensionId) + ")";
         }
         return coordString;
+    }
+
+    private static int getCoordinateDecimalPlaces() {
+        if (config == null) {
+            return CopyCoordsConfig.DEFAULT_DECIMAL_PLACES;
+        }
+        return CopyCoordsConfig.clampDecimalPlaces(config.decimalPlaces);
+    }
+
+    static String formatCoordinateValue(double value) {
+        int decimalPlaces = getCoordinateDecimalPlaces();
+        return String.format(Locale.ROOT, "%." + decimalPlaces + "f", value);
     }
 
 
 
     public static String applyTemplate(String template, double x, double y, double z, String dimensionId) {
         String result = template;
-        result = result.replace("{x}", String.valueOf(x));
-        result = result.replace("{y}", String.valueOf(y));
-        result = result.replace("{z}", String.valueOf(z));
+        result = result.replace("{x}", formatCoordinateValue(x));
+        result = result.replace("{y}", formatCoordinateValue(y));
+        result = result.replace("{z}", formatCoordinateValue(z));
         result = result.replace("{dimension}", dimensionId == null ? "" : dimensionId);
         result = result.replace("{dimName}", getDimensionNameFromId(dimensionId));
         return result;
@@ -845,7 +860,13 @@ public class CopyCoords implements ClientModInitializer {
 
             DistanceCalculator.DistanceResult result = DistanceCalculator.calculate(x1, y1, z1, x2, y2, z2);
 
-            String message = "§6Distance Calculator§r: From [" + x1 + ", " + y1 + ", " + z1 + "] to [" + x2 + ", " + y2 + ", " + z2 + "]";
+            String message = "§6Distance Calculator§r: From ["
+                    + formatCoordinateValue(x1) + ", "
+                    + formatCoordinateValue(y1) + ", "
+                    + formatCoordinateValue(z1) + "] to ["
+                    + formatCoordinateValue(x2) + ", "
+                    + formatCoordinateValue(y2) + ", "
+                    + formatCoordinateValue(z2) + "]";
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));
             
             String resultMessage = "§2" + DistanceCalculator.formatResult(result, true);
@@ -886,7 +907,13 @@ public class CopyCoords implements ClientModInitializer {
             String message = "§6Distance Calculator§r: From '" + bm1Name + "' to '" + bm2Name + "'";
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));
             
-            String coordMessage = "  From [" + bm1.x + ", " + bm1.y + ", " + bm1.z + "] to [" + bm2.x + ", " + bm2.y + ", " + bm2.z + "]";
+            String coordMessage = "  From ["
+                    + formatCoordinateValue(bm1.x) + ", "
+                    + formatCoordinateValue(bm1.y) + ", "
+                    + formatCoordinateValue(bm1.z) + "] to ["
+                    + formatCoordinateValue(bm2.x) + ", "
+                    + formatCoordinateValue(bm2.y) + ", "
+                    + formatCoordinateValue(bm2.z) + "]";
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal(coordMessage));
             
             String resultMessage = "§2" + DistanceCalculator.formatResult(result, true);
