@@ -132,7 +132,10 @@ public class CopyCoordsDataStore {
 
     public boolean exportBookmarks(Path out) {
         try {
-            Files.createDirectories(out.getParent());
+            Path parent = out.toAbsolutePath().getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             String json = GSON.toJson(bookmarks.values());
             Files.writeString(out, json);
             return true;

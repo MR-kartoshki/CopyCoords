@@ -25,6 +25,7 @@ import net.minecraft.world.level.Level;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
@@ -131,30 +132,7 @@ public class CopyCoords implements ClientModInitializer {
                         .executes(context -> executeHistoryCopy(IntegerArgumentType.getInteger(context, "index")))));
                 dispatcher.register(history);
 
-                LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommandManager.literal("coordbookmark");
-                bookmark.executes(context -> executeBookmarkList());
-                bookmark.then(ClientCommandManager.literal("list")
-                    .executes(context -> executeBookmarkList()));
-                bookmark.then(ClientCommandManager.literal("add")
-                    .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
-                        .executes(context -> executeBookmarkAdd(StringArgumentType.getString(context, "name")))));
-                bookmark.then(ClientCommandManager.literal("copy")
-                    .then(ClientCommandManager.argument("name", StringArgumentType.string())
-                        .suggests(bookmarkSuggestions)
-                        .executes(context -> executeBookmarkCopy(StringArgumentType.getString(context, "name")))));
-                bookmark.then(ClientCommandManager.literal("remove")
-                    .then(ClientCommandManager.argument("name", StringArgumentType.string())
-                        .suggests(bookmarkSuggestions)
-                        .executes(context -> executeBookmarkRemove(StringArgumentType.getString(context, "name")))));
-
-                bookmark.then(ClientCommandManager.literal("export")
-                    .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
-                        .executes(ctx -> executeBookmarkExport(StringArgumentType.getString(ctx, "file")))));
-                bookmark.then(ClientCommandManager.literal("import")
-                    .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
-                        .executes(ctx -> executeBookmarkImport(StringArgumentType.getString(ctx, "file")))));
-
-                dispatcher.register(bookmark);
+                dispatcher.register(buildBookmarkCommand("coordsbookmark", bookmarkSuggestions));
 
                 LiteralArgumentBuilder<FabricClientCommandSource> distcalc = ClientCommandManager.literal("distcalc");
                 
@@ -368,6 +346,33 @@ public class CopyCoords implements ClientModInitializer {
         String coordString = formatCoordinateValue(x) + " " + formatCoordinateValue(y) + " " + formatCoordinateValue(z);
 
         return sendCoordsMessage(target, coordString);
+    }
+
+    private LiteralArgumentBuilder<FabricClientCommandSource> buildBookmarkCommand(
+            String rootCommand,
+            SuggestionProvider<FabricClientCommandSource> bookmarkSuggestions) {
+        LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommandManager.literal(rootCommand);
+        bookmark.executes(context -> executeBookmarkList());
+        bookmark.then(ClientCommandManager.literal("list")
+                .executes(context -> executeBookmarkList()));
+        bookmark.then(ClientCommandManager.literal("add")
+                .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
+                        .executes(context -> executeBookmarkAdd(StringArgumentType.getString(context, "name")))));
+        bookmark.then(ClientCommandManager.literal("copy")
+                .then(ClientCommandManager.argument("name", StringArgumentType.string())
+                        .suggests(bookmarkSuggestions)
+                        .executes(context -> executeBookmarkCopy(StringArgumentType.getString(context, "name")))));
+        bookmark.then(ClientCommandManager.literal("remove")
+                .then(ClientCommandManager.argument("name", StringArgumentType.string())
+                        .suggests(bookmarkSuggestions)
+                        .executes(context -> executeBookmarkRemove(StringArgumentType.getString(context, "name")))));
+        bookmark.then(ClientCommandManager.literal("export")
+                .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
+                        .executes(ctx -> executeBookmarkExport(StringArgumentType.getString(ctx, "file")))));
+        bookmark.then(ClientCommandManager.literal("import")
+                .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
+                        .executes(ctx -> executeBookmarkImport(StringArgumentType.getString(ctx, "file")))));
+        return bookmark;
     }
 
     private int executeMsgCoordsWithGoal(CommandContext<FabricClientCommandSource> context) {
@@ -666,7 +671,7 @@ public class CopyCoords implements ClientModInitializer {
         Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmarks (click to copy):"));
         for (CopyCoordsDataStore.BookmarkEntry entry : bookmarks) {
             String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
-            String command = "/coordbookmark copy " + quoteForBrigadier(entry.name);
+            String command = "/coordsbookmark copy " + quoteForBrigadier(entry.name);
                         ClickEvent clickEvent = buildClickEvent(command);
                         HoverEvent hoverEvent = buildHoverEvent(Component.literal("Copy to clipboard"));
                         net.minecraft.network.chat.MutableComponent line = Component.literal(entry.name + " - " + coordString)
@@ -722,11 +727,12 @@ public class CopyCoords implements ClientModInitializer {
     private int executeBookmarkExport(String file) {
         if (dataStore == null) return 0;
         try {
-            Path path = Path.of(file);
+            Path path = resolveBookmarkTransferPath(file, false);
             if (dataStore.exportBookmarks(path)) {
                 Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.exported", path.toString()));
                 return Command.SINGLE_SUCCESS;
             }
+            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.export_failed", "see log for details"));
         } catch (Exception e) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.export_failed", e.getMessage()));
         }
@@ -736,15 +742,40 @@ public class CopyCoords implements ClientModInitializer {
     private int executeBookmarkImport(String file) {
         if (dataStore == null) return 0;
         try {
-            Path path = Path.of(file);
+            Path path = resolveBookmarkTransferPath(file, true);
             if (dataStore.importBookmarks(path)) {
                 Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.imported", path.toString()));
                 return Command.SINGLE_SUCCESS;
             }
+            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.import_failed", "see log for details"));
         } catch (Exception e) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.import_failed", e.getMessage()));
         }
         return 0;
+    }
+
+    private static Path resolveBookmarkTransferPath(String file, boolean forImport) {
+        String trimmed = file == null ? "" : file.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("File path cannot be empty.");
+        }
+
+        Path rawPath = Path.of(trimmed);
+        if (hasJsonExtension(rawPath)) {
+            return rawPath;
+        }
+
+        if (forImport && Files.exists(rawPath)) {
+            return rawPath;
+        }
+
+        return Path.of(trimmed + ".json");
+    }
+
+    private static boolean hasJsonExtension(Path path) {
+        Path fileName = path.getFileName();
+        String name = fileName == null ? path.toString() : fileName.toString();
+        return name.toLowerCase(Locale.ROOT).endsWith(".json");
     }
 
     private static String quoteForBrigadier(String value) {
