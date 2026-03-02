@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "copycoords",
   "version": "${version}",
-  "name": "Copy Coords",
+  "name": "CopyCoords",
   "description": "CopyCoords is a small Fabric mod for Minecraft that makes it quick and easy to get, share, and convert coordinates.",
   "authors": ["freddy._.fazbear (Discord)","MR-Kartoshki (GitHub)"],
   "license": "MIT",
