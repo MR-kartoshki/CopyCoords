@@ -18,6 +18,10 @@ final class ChatEventFactory {
         return new ClickEvent.CopyToClipboard(value);
     }
 
+    static ClickEvent suggestCommand(String command) {
+        return new ClickEvent.SuggestCommand(command);
+    }
+
     static HoverEvent showText(Component text) {
         return new HoverEvent.ShowText(text);
     }
@@ -26,4 +30,3 @@ final class ChatEventFactory {
         return new ClickEvent.OpenUrl(URI.create(url));
     }
 }
-

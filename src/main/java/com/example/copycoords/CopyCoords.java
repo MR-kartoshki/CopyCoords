@@ -130,6 +130,12 @@ public class CopyCoords implements ClientModInitializer {
                 history.then(ClientCommandManager.literal("copy")
                     .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryCopy(IntegerArgumentType.getInteger(context, "index")))));
+                history.then(ClientCommandManager.literal("remove")
+                    .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
+                        .executes(context -> executeHistoryRemove(IntegerArgumentType.getInteger(context, "index")))));
+                history.then(ClientCommandManager.literal("menu")
+                    .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
+                        .executes(context -> executeHistoryMenu(IntegerArgumentType.getInteger(context, "index")))));
                 dispatcher.register(history);
 
                 dispatcher.register(buildBookmarkCommand("coordsbookmark", bookmarkSuggestions));
@@ -586,18 +592,26 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
 
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Recent coordinates (click to copy):"));
+        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Recent coordinates (click entry to copy, use [menu] for actions):"));
 
         for (int i = 0; i < history.size(); i++) {
             CopyCoordsDataStore.HistoryEntry entry = history.get(i);
             String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
             int index = i + 1;
             final int clickIndex = index;
-                        ClickEvent clickEvent = buildClickEvent("/coordshistory copy " + clickIndex);
-                        HoverEvent hoverEvent = buildHoverEvent(Component.literal("Copy to clipboard"));
-                        net.minecraft.network.chat.MutableComponent line = Component.literal(index + ") " + coordString)
-                            .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
-                        appendMapLinks(line, entry.x, entry.y, entry.z, entry.dimensionId);
+            ClickEvent clickEvent = buildClickEvent("/coordshistory copy " + clickIndex);
+            HoverEvent hoverEvent = buildHoverEvent(Component.literal("Copy this entry to clipboard. Shift-click to insert into chat."));
+            net.minecraft.network.chat.MutableComponent line = Component.literal(index + ") " + coordString)
+                    .withStyle(style -> applyEvents(style.withInsertion(coordString), clickEvent, hoverEvent));
+            line.append(Component.literal(" "));
+            line.append(buildActionChip("copy", buildClickEvent("/coordshistory copy " + clickIndex), "Copy this entry to clipboard"));
+            line.append(Component.literal(" "));
+            line.append(buildActionChip("insert", buildSuggestCommandEvent(coordString), "Insert this entry into chat input"));
+            line.append(Component.literal(" "));
+            line.append(buildActionChip("remove", buildClickEvent("/coordshistory remove " + clickIndex), "Remove this entry from history"));
+            line.append(Component.literal(" "));
+            line.append(buildActionChip("menu", buildClickEvent("/coordshistory menu " + clickIndex), "Open quick actions for this entry"));
+            appendMapLinks(line, entry.x, entry.y, entry.z, entry.dimensionId);
             Minecraft.getInstance().gui.getChat().addMessage(line);
         }
 
@@ -626,6 +640,43 @@ public class CopyCoords implements ClientModInitializer {
             Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
             return 0;
         }
+    }
+
+    private int executeHistoryRemove(int index) {
+        if (!dataStore.removeHistoryEntry(index - 1)) {
+            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
+            return 0;
+        }
+
+        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Removed history entry " + index + "."));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int executeHistoryMenu(int index) {
+        List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
+        if (index < 1 || index > history.size()) {
+            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
+            return 0;
+        }
+
+        CopyCoordsDataStore.HistoryEntry entry = history.get(index - 1);
+        String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
+
+        net.minecraft.network.chat.MutableComponent title = Component.literal("History entry " + index + ": " + coordString);
+        appendMapLinks(title, entry.x, entry.y, entry.z, entry.dimensionId);
+        Minecraft.getInstance().gui.getChat().addMessage(title);
+
+        net.minecraft.network.chat.MutableComponent actions = Component.literal("Actions: ");
+        actions.append(buildActionChip("copy", buildClickEvent("/coordshistory copy " + index), "Copy this entry to clipboard"));
+        actions.append(Component.literal(" "));
+        actions.append(buildActionChip("insert", buildSuggestCommandEvent(coordString), "Insert this entry into chat input"));
+        actions.append(Component.literal(" "));
+        actions.append(buildActionChip("remove", buildClickEvent("/coordshistory remove " + index), "Remove this entry from history"));
+        actions.append(Component.literal(" "));
+        actions.append(buildActionChip("clear_all", buildClickEvent("/coordshistory clear"), "Clear all history entries"));
+        Minecraft.getInstance().gui.getChat().addMessage(actions);
+
+        return Command.SINGLE_SUCCESS;
     }
 
     private int executeHistoryClear() {
@@ -799,8 +850,20 @@ public class CopyCoords implements ClientModInitializer {
         return ChatEventFactory.runCommand(command);
     }
 
+    private static ClickEvent buildSuggestCommandEvent(String command) {
+        return ChatEventFactory.suggestCommand(command);
+    }
+
     private static HoverEvent buildHoverEvent(Component text) {
         return ChatEventFactory.showText(text);
+    }
+
+    private static net.minecraft.network.chat.MutableComponent buildActionChip(String label,
+                                                                               ClickEvent clickEvent,
+                                                                               String hoverText) {
+        HoverEvent hoverEvent = buildHoverEvent(Component.literal(hoverText));
+        return Component.literal("[" + label + "]")
+                .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
     }
 
     private void postCoordinateMessage(String prefix, String coordString, int x, int y, int z, String dimensionId) {

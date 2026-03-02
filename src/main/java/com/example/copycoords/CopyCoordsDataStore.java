@@ -94,6 +94,15 @@ public class CopyCoordsDataStore {
         save();
     }
 
+    public boolean removeHistoryEntry(int zeroBasedIndex) {
+        if (zeroBasedIndex < 0 || zeroBasedIndex >= history.size()) {
+            return false;
+        }
+        history.remove(zeroBasedIndex);
+        save();
+        return true;
+    }
+
     public boolean addBookmark(String name, double x, double y, double z, String dimensionId) {
         String key = normalizeName(name);
         if (bookmarks.containsKey(key)) {
