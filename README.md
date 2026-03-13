@@ -2,26 +2,61 @@
 
 CopyCoords is a client-side Fabric mod that makes coordinates faster to copy, convert, and share.
 
-## What it does
+## Supported Minecraft Versions
 
-- `/copycoords` (alias: `/cc`) shows your current coordinates
-- `/convertcoords` converts Overworld ↔ Nether coordinates (8:1)
+- `1.19`
+- `1.19.1`
+- `1.19.2`
+- `1.19.3`
+- `1.19.4`
+- `1.20`
+- `1.20.1`
+- `1.20.2`
+- `1.20.3`
+- `1.20.4`
+- `1.20.5`
+- `1.20.6`
+- `1.21`
+- `1.21.1`
+- `1.21.2`
+- `1.21.3`
+- `1.21.4`
+- `1.21.5`
+- `1.21.6`
+- `1.21.7`
+- `1.21.8`
+- `1.21.9`
+- `1.21.10`
+- `1.21.11`
+
+Each release jar is built for a specific Minecraft version.
+
+## Features
+
+- `/copycoords` and `/cc` show your current coordinates
+- `/convertcoords` converts Overworld <-> Nether coordinates using the 8:1 ratio
 - `/msgcoords` sends your coordinates to another player
-- `/distcalc` calculates distance between two positions
-- Clickable coordinates in chat (click to copy)
-- Keybinds for quick copy actions:
-  - `C` copy current coordinates
-  - `V` copy converted coordinates
-  - `B` copy with dimension name
-  - `Unbound by default` (sends current coordinates directly to server chat)
-- Optional map links (Dynmap/BlueMap/custom web map)
+- `/distcalc` calculates distance between two positions or bookmarks
+- Clickable coordinates in chat
+- Coordinate history with copy, insert, remove, and menu actions
+- Bookmark add/list/copy/remove/import/export commands
+- Configurable coordinate formatting, decimal precision, and templates
+- Optional map links for Dynmap, BlueMap, or custom web maps
+- Keybinds for:
+  - copying current coordinates
+  - copying converted coordinates
+  - copying coordinates with dimension
+  - instant chat send
 
 ## Installation
 
-1. Install Fabric Loader for the Minecraft version you intend to use
-2. Install dependencies: Fabric API, Cloth Config, Mod Menu
-3. Put `copycoords-<version>.jar` in your `mods` folder
-4. Launch Minecraft
+1. Install Fabric Loader for your Minecraft version.
+2. Install the required dependencies for that same version:
+   - Fabric API
+   - Cloth Config
+   - Mod Menu
+3. Put the matching `copycoords+<mc-version>-<mod-version>.jar` in your `mods` folder.
+4. Launch the game.
 
 ## Commands
 
@@ -38,22 +73,22 @@ CopyCoords is a client-side Fabric mod that makes coordinates faster to copy, co
 - `/coordshistory remove <index>`
 - `/coordshistory menu <index>`
 - `/coordshistory clear`
-- `/coordsbookmark add <name>` (alias: `/coordbookmark`)
-- `/coordsbookmark list` (alias: `/coordbookmark list`)
-- `/coordsbookmark copy <name>` (alias: `/coordbookmark copy`)
-- `/coordsbookmark remove <name>` (alias: `/coordbookmark remove`)
-- `/coordsbookmark export <file>` (alias: `/coordbookmark export`)
-- `/coordsbookmark import <file>` (alias: `/coordbookmark import`)
+- `/coordsbookmark add <name>`
+- `/coordsbookmark list`
+- `/coordsbookmark copy <name>`
+- `/coordsbookmark remove <name>`
+- `/coordsbookmark export <file>`
+- `/coordsbookmark import <file>`
+- `/coordbookmark ...` alias for bookmark commands
 
 ## Configuration
 
-Use Mod Menu for most settings.
+Use Mod Menu for configuration.
 
 Config files:
 
 - `%APPDATA%/.minecraft/config/copycoords/copycoords.json`
 - `%APPDATA%/.minecraft/config/copycoords/copycoords-data.json`
-- `%APPDATA%/.minecraft/config/copycoords/telemetry.json`
 
 Main options:
 
@@ -61,44 +96,32 @@ Main options:
 - `copyConvertedToClipboard`
 - `showDimensionInCoordinates`
 - `pasteToChatInput`
-- `instantChatEnabled` (when enabled, `/cc` and `/copycoords` also send output to server chat)
-- `coordinateFormat` (`space`, `bracket`, `xyz`)
-- `decimalPlaces` (`0-10`, default `2`)
-  - Controls how many digits are shown after the decimal point.
-  - Trailing zeros are always shown (for example, `100.00` when set to `2`).
-- `coordinateTemplate` (custom format string, overrides `coordinateFormat` when non‑empty)
-  - You can use placeholders `{x}`, `{y}`, `{z}`, `{dimension}`, and `{dimName}`.
-  - `{x}`, `{y}`, and `{z}` respect `decimalPlaces`.
-  - A live preview appears in the template field's tooltip as you edit.
-- `Instant Chat Send` keybind (configurable in Controls, always sends current coordinates to server chat regardless of `instantChatEnabled`)
+- `instantChatEnabled`
+- `coordinateFormat`
+- `decimalPlaces`
+- `coordinateTemplate`
+- `mapLinksEnabled`
+- `dynmapUrlTemplate`
+- `bluemapUrlTemplate`
+- `webMapUrlTemplate`
 
-### Map links
+Template placeholders:
 
-Map links are optional and disabled by default.
+- `{x}`
+- `{y}`
+- `{z}`
+- `{dimension}`
+- `{dimName}`
 
-- Enable in Mod Menu: `Map Links -> Enable map links`
-- Configure templates:
-  - `dynmapUrlTemplate`
-  - `bluemapUrlTemplate`
-  - `webMapUrlTemplate`
+Map link placeholders:
 
-Supported placeholders:
-
-- `{x}` `{y}` `{z}`
-- `{world}` `{worldEncoded}`
-- `{dimension}` `{dimensionEncoded}`
-
-If Dynmap or BlueMap is not installed, those links are skipped automatically.
-
-## Telemetry
-
-CopyCoords sends minimal anonymous usage telemetry.
-
-- No personal data is collected.
-- Disable anytime in Mod Menu (`Telemetry -> Enable telemetry`) or by setting `enabled: false` in `config/copycoords/telemetry.json`.
-
-Full disclosure:
-https://mr-kartoshki.github.io/TelemetryDisclosure/
+- `{x}`
+- `{y}`
+- `{z}`
+- `{world}`
+- `{worldEncoded}`
+- `{dimension}`
+- `{dimensionEncoded}`
 
 ## License
 
@@ -106,5 +129,5 @@ MIT. See `LICENSE`.
 
 ## Credits
 
-- MR-Kartoshki (GitHub)
-- freddy._.fazbear (Discord)
+- MR-Kartoshki
+- freddy._.fazbear

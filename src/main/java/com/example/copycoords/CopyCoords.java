@@ -8,7 +8,6 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.example.copycoords.telemetry.TelemetryBootstrap;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -43,7 +42,6 @@ public class CopyCoords implements ClientModInitializer {
     public void onInitializeClient() {
         config = CopyCoordsConfig.load();
         dataStore = CopyCoordsDataStore.load();
-        TelemetryBootstrap.initAndMaybeSend();
         CopyCoordsBind.register();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
@@ -170,8 +168,7 @@ public class CopyCoords implements ClientModInitializer {
 
     private static boolean sendChatLine(ClientPacketListener connection, String line) {
         try {
-            connection.sendChat(line);
-            return true;
+            return ChatSendCompat.sendChat(Minecraft.getInstance(), connection, line);
         } catch (Throwable error) {
             reportInstantSendFailure(Minecraft.getInstance(), "chat send failed", error);
             return false;
@@ -208,8 +205,7 @@ public class CopyCoords implements ClientModInitializer {
                 return false;
             }
             try {
-                connection.sendCommand(command);
-                return true;
+                return ChatSendCompat.sendCommand(client, connection, command);
             } catch (Throwable error) {
                 reportInstantSendFailure(client, "command send failed", error);
                 return false;
@@ -433,7 +429,7 @@ public class CopyCoords implements ClientModInitializer {
             return null;
         }
 
-        if (!player.level().dimension().equals(Level.OVERWORLD) && !player.level().dimension().equals(Level.NETHER)) {
+        if (!PlayerLevelCompat.isInDimension(player, Level.OVERWORLD) && !PlayerLevelCompat.isInDimension(player, Level.NETHER)) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.unsupported_dimension"));
             return null;
         }
@@ -441,10 +437,10 @@ public class CopyCoords implements ClientModInitializer {
         double rx = x;
         double rz = z;
 
-        if (player.level().dimension().equals(Level.OVERWORLD) && goal.equals("nether")) {
+        if (PlayerLevelCompat.isInDimension(player, Level.OVERWORLD) && goal.equals("nether")) {
             rx = x / 8.0;
             rz = z / 8.0;
-        } else if (player.level().dimension().equals(Level.NETHER) && goal.equals("overworld")) {
+        } else if (PlayerLevelCompat.isInDimension(player, Level.NETHER) && goal.equals("overworld")) {
             rx = x * 8.0;
             rz = z * 8.0;
         }
@@ -461,8 +457,9 @@ public class CopyCoords implements ClientModInitializer {
         }
 
         try {
-            connection.sendCommand("msg " + target + " " + coordString);
-            return Command.SINGLE_SUCCESS;
+            return ChatSendCompat.sendCommand(Minecraft.getInstance(), connection, "msg " + target + " " + coordString)
+                    ? Command.SINGLE_SUCCESS
+                    : 0;
         } catch (Exception e) {
             String errorMsg = e.getMessage();
             if (errorMsg == null || errorMsg.isEmpty()) {
@@ -474,7 +471,7 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     static String getDimensionId(Player player) {
-        return player.level().dimension().toString();
+        return PlayerLevelCompat.getDimensionId(player);
     }
 
     static String getDimensionIdForGoal(String goal) {

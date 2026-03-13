@@ -116,9 +116,9 @@ public class CopyCoordsBind {
         int z = player.blockPosition().getZ();
 
         String goal;
-        if (player.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) {
+        if (PlayerLevelCompat.isInDimension(player, net.minecraft.world.level.Level.OVERWORLD)) {
             goal = "nether";
-        } else if (player.level().dimension().equals(net.minecraft.world.level.Level.NETHER)) {
+        } else if (PlayerLevelCompat.isInDimension(player, net.minecraft.world.level.Level.NETHER)) {
             goal = "overworld";
         } else {
             minecraft.gui.getChat().addMessage(net.minecraft.network.chat.Component.translatable("message.copycoords.command.unsupported_dimension"));
