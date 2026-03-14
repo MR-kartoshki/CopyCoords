@@ -26,6 +26,7 @@
   "message.copycoords.keybind.copied_converted": "変換された座標をクリップボードにコピーしました: %s",
   "message.copycoords.keybind.copied_with_dimension": "ディメンション情報付き座標をクリップボードにコピーしました: %s",
   "message.copycoords.keybind.failed": "座標をクリップボードにコピーできませんでした: %s",
+  "message.copycoords.instant_chat_send_unbound": "[CopyCoords] 「チャットに即時送信」が未割り当てです。設定の操作からキーを割り当ててください。",
   "message.copycoords.command.converted": "変換された座標: %s",
   "message.copycoords.command.unknown_goal": "不明なターゲットディメンション: %s (overworld または nether を使用)",
   "message.copycoords.command.unsupported_dimension": "このディメンションでは座標を変換できません (オーバーワールドとネザーのみサポート)。",

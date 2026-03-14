@@ -2,6 +2,12 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.12.2] - 2026-03-14
+
+### Fixed
+
+- Fixed a bug where the instant send to chat keybind would not work.
+
 ## [1.12.1] - 2026-03-13
 
 ### Added
@@ -11,10 +17,6 @@ All notable changes to CopyCoords will be documented in this file.
 ### Removed
 
 - Telemetry and all related config/UI code
-
-### Changed
-
-- Updated README for the expanded version matrix and current feature set
 
 ## [1.12.0] - 2026-03-02
 

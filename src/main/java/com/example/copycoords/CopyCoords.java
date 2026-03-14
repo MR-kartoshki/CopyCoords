@@ -1,4 +1,3 @@
-// Why the fuck is this so long? I just want to copy my coordinates, not write a novel about it. Also, why do I need to support multiple versions of Minecraft? Can't I just make it for the latest version and be done with it? Ugh, modding is so much work.
 package com.example.copycoords;
 
 import com.mojang.brigadier.Command;
@@ -168,7 +167,11 @@ public class CopyCoords implements ClientModInitializer {
 
     private static boolean sendChatLine(ClientPacketListener connection, String line) {
         try {
-            return ChatSendCompat.sendChat(Minecraft.getInstance(), connection, line);
+            boolean sent = ChatSendCompat.sendChat(Minecraft.getInstance(), connection, line);
+            if (!sent) {
+                reportInstantSendFailure(Minecraft.getInstance(), "chat send failed", ChatSendCompat.getLastFailureReason());
+            }
+            return sent;
         } catch (Throwable error) {
             reportInstantSendFailure(Minecraft.getInstance(), "chat send failed", error);
             return false;
@@ -205,7 +208,11 @@ public class CopyCoords implements ClientModInitializer {
                 return false;
             }
             try {
-                return ChatSendCompat.sendCommand(client, connection, command);
+                boolean sent = ChatSendCompat.sendCommand(client, connection, command);
+                if (!sent) {
+                    reportInstantSendFailure(client, "command send failed", ChatSendCompat.getLastFailureReason());
+                }
+                return sent;
             } catch (Throwable error) {
                 reportInstantSendFailure(client, "command send failed", error);
                 return false;
@@ -216,15 +223,22 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private static void reportInstantSendFailure(Minecraft client, String prefix, Throwable error) {
-        if (client == null || client.player == null) {
-            return;
-        }
-
         String details = "unknown";
         if (error != null && error.getMessage() != null && !error.getMessage().isBlank()) {
             details = error.getMessage();
         } else if (error != null) {
             details = error.getClass().getSimpleName();
+        }
+        reportInstantSendFailure(client, prefix, details);
+    }
+
+    private static void reportInstantSendFailure(Minecraft client, String prefix, String details) {
+        if (client == null || client.player == null) {
+            return;
+        }
+
+        if (details == null || details.isBlank()) {
+            details = "unknown";
         }
 
         client.gui.getChat().addMessage(Component.literal("[CopyCoords] Instant send failed: " + prefix + " (" + details + ")"));
@@ -250,7 +264,7 @@ public class CopyCoords implements ClientModInitializer {
         postCoordinateMessage("Your current coordinates are: ", coordString, ix, iy, iz, dimensionId);
         maybeInstantSendCommandOutput(coordString);
 
-        if (config.copyToClipboard) {
+        if (config != null && config.copyToClipboard) {
             copyToClipboardWithFeedback(coordString, ix, iy, iz, dimensionId);
         }
 
@@ -283,7 +297,7 @@ public class CopyCoords implements ClientModInitializer {
         postCoordinateMessage("Converted coordinates: ", coordString, cx, cy, cz, dimensionId);
         maybeInstantSendCommandOutput(coordString);
 
-        if (config.copyConvertedToClipboard) {
+        if (config != null && config.copyConvertedToClipboard) {
             copyToClipboardWithFeedback(coordString, cx, cy, cz, dimensionId);
         }
 
@@ -301,19 +315,12 @@ public class CopyCoords implements ClientModInitializer {
         
         double x, y, z;
 
-        try {
-            String coordInput = StringArgumentType.getString(context, "coordinates");
-            String[] parts = coordInput.trim().split("\\s+");
+        String coordInput = StringArgumentType.getString(context, "coordinates");
+        String[] parts = coordInput.trim().split("\\s+");
 
-            x = parseCoordinate(parts.length > 0 ? parts[0] : "~", player.getX());
-            y = parseCoordinate(parts.length > 1 ? parts[1] : "~", player.getY());
-            z = parseCoordinate(parts.length > 2 ? parts[2] : "~", player.getZ());
-        } catch (Exception e) {
-
-            x = Math.floor(player.getX());
-            y = Math.floor(player.getY());
-            z = Math.floor(player.getZ());
-        }
+        x = parseCoordinate(parts.length > 0 ? parts[0] : "~", player.getX());
+        y = parseCoordinate(parts.length > 1 ? parts[1] : "~", player.getY());
+        z = parseCoordinate(parts.length > 2 ? parts[2] : "~", player.getZ());
 
         double[] converted = convertCurrentCoordsToGoal(player, goal, x, y, z);
         if (converted == null) {
@@ -328,7 +335,7 @@ public class CopyCoords implements ClientModInitializer {
         int cz = (int) Math.floor(converted[2]);
         postCoordinateMessage("Converted coordinates: ", out, cx, cy, cz, dimensionId);
 
-        if (config.copyConvertedToClipboard) {
+        if (config != null && config.copyConvertedToClipboard) {
             copyToClipboardWithFeedback(out, cx, cy, cz, dimensionId);
         }
 
@@ -557,6 +564,15 @@ public class CopyCoords implements ClientModInitializer {
         }
     }
 
+    private static boolean ensureDataStoreAvailable() {
+        if (dataStore != null) {
+            return true;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        mc.gui.getChat().addMessage(Component.literal("Data store is not available yet."));
+        return false;
+    }
+
     public static void openChatWithText(String text) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) {
@@ -584,6 +600,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeHistoryList() {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
         if (history.isEmpty()) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("History is empty."));
@@ -617,6 +636,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeHistoryCopy(int index) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
         if (index < 1 || index > history.size()) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
@@ -641,6 +663,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeHistoryRemove(int index) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         if (!dataStore.removeHistoryEntry(index - 1)) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
             return 0;
@@ -651,6 +676,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeHistoryMenu(int index) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
         if (index < 1 || index > history.size()) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
@@ -678,12 +706,18 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeHistoryClear() {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         dataStore.clearHistory();
         Minecraft.getInstance().gui.getChat().addMessage(Component.literal("History cleared."));
         return Command.SINGLE_SUCCESS;
     }
 
     private int executeBookmarkAdd(String name) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         Player player = Minecraft.getInstance().player;
         if (player == null) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
@@ -711,6 +745,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeBookmarkList() {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         List<CopyCoordsDataStore.BookmarkEntry> bookmarks = dataStore.getBookmarks();
         if (bookmarks.isEmpty()) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("No bookmarks yet."));
@@ -737,6 +774,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeBookmarkCopy(String name) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         CopyCoordsDataStore.BookmarkEntry entry = dataStore.getBookmark(name);
         if (entry == null) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark not found: " + name));
@@ -764,6 +804,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeBookmarkRemove(String name) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         if (dataStore.removeBookmark(name)) {
             Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark removed: " + name));
             return Command.SINGLE_SUCCESS;
@@ -774,7 +817,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeBookmarkExport(String file) {
-        if (dataStore == null) return 0;
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         try {
             Path path = resolveBookmarkTransferPath(file, false);
             if (dataStore.exportBookmarks(path)) {
@@ -789,7 +834,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeBookmarkImport(String file) {
-        if (dataStore == null) return 0;
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         try {
             Path path = resolveBookmarkTransferPath(file, true);
             if (dataStore.importBookmarks(path)) {
@@ -920,7 +967,8 @@ public class CopyCoords implements ClientModInitializer {
             net.minecraft.network.chat.MutableComponent link = Component.literal(" [" + label + "]")
                     .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
             message.append(link);
-        } catch (Exception ignored) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid map link URL for template '" + label + "': " + e.getMessage());
         }
     }
 
@@ -972,6 +1020,9 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private int executeDistanceCalcBookmarks(CommandContext<FabricClientCommandSource> context) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
         try {
             String bm1Name = StringArgumentType.getString(context, "bookmark1");
             String bm2Name = StringArgumentType.getString(context, "bookmark2");
@@ -1018,23 +1069,5 @@ public class CopyCoords implements ClientModInitializer {
         }
     }
 
-    private static int parseCoordOrPlayerCoord(String input, Player player, String coordType) {
-        if (player == null) {
-            throw new IllegalArgumentException("Player not found");
-        }
-        
-        double playerCoord;
-        if ("x".equals(coordType)) {
-            playerCoord = player.getX();
-        } else if ("y".equals(coordType)) {
-            playerCoord = player.getY();
-        } else if ("z".equals(coordType)) {
-            playerCoord = player.getZ();
-        } else {
-            throw new IllegalArgumentException("Invalid coordinate type: " + coordType);
-        }
-        
-        return (int) Math.floor(parseCoordinate(input, playerCoord));
-    }
 }
 

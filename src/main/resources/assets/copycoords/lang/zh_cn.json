@@ -26,6 +26,7 @@
   "message.copycoords.keybind.copied_converted": "转换后的坐标已复制到剪贴板: %s",
   "message.copycoords.keybind.copied_with_dimension": "带维度的坐标已复制到剪贴板: %s",
   "message.copycoords.keybind.failed": "将坐标复制到剪贴板失败: %s",
+  "message.copycoords.instant_chat_send_unbound": "[CopyCoords] \"即时发送到聊天\" 未绑定按键。请在控制设置中绑定一个按键。",
   "message.copycoords.command.converted": "转换的坐标: %s",
   "message.copycoords.command.unknown_goal": "未知的目标维度: %s (使用 overworld 或 nether)",
   "message.copycoords.command.unsupported_dimension": "无法在此维度中转换坐标 (仅支持主世界和下界)。",

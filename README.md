@@ -105,6 +105,11 @@ Main options:
 - `bluemapUrlTemplate`
 - `webMapUrlTemplate`
 
+Instant chat send notes:
+
+- The Instant Chat Send keybind is unbound by default. Set it in Controls before use.
+- If sending fails, CopyCoords now shows an in-chat failure reason to help with troubleshooting.
+
 Template placeholders:
 
 - `{x}`

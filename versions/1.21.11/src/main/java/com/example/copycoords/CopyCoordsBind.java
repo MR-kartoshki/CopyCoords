@@ -1,11 +1,14 @@
 package com.example.copycoords;
 
+import java.lang.reflect.Method;
+
 import org.lwjgl.glfw.GLFW;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 
@@ -23,6 +26,7 @@ public class CopyCoordsBind {
             KeyMapping.Category.register(Identifier.fromNamespaceAndPath("copycoords", "keybinds"));
 
     private static boolean REGISTERED = false;
+    private static boolean INSTANT_KEYBIND_HINT_SHOWN = false;
 
     public static void register() {
         if (REGISTERED) {
@@ -40,6 +44,12 @@ public class CopyCoordsBind {
                 createKeyMapping("key.copycoords.instant_chat_send", InputConstants.UNKNOWN.getValue()));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!INSTANT_KEYBIND_HINT_SHOWN && client != null && client.player != null
+                    && isKeyMappingUnbound(instantChatSendKeyBinding)) {
+                client.gui.getChat().addMessage(Component.translatable("message.copycoords.instant_chat_send_unbound"));
+                INSTANT_KEYBIND_HINT_SHOWN = true;
+            }
+
             if (copyKeyBinding != null) {
                 while (copyKeyBinding.consumeClick()) {
                     executeKeybindCopy(client);
@@ -65,6 +75,49 @@ public class CopyCoordsBind {
 
     private static KeyMapping createKeyMapping(String translationKey, int keyCode) {
         return new KeyMapping(translationKey, InputConstants.Type.KEYSYM, keyCode, CATEGORY);
+    }
+
+    private static boolean isKeyMappingUnbound(KeyMapping keyMapping) {
+        if (keyMapping == null) {
+            return false;
+        }
+
+        try {
+            Method isUnbound = keyMapping.getClass().getMethod("isUnbound");
+            Object result = isUnbound.invoke(keyMapping);
+            if (result instanceof Boolean) {
+                return (Boolean) result;
+            }
+        } catch (ReflectiveOperationException ignored) {
+        }
+
+        Object key = tryInvokeNoArg(keyMapping, "getKey");
+        if (key == null) {
+            key = tryInvokeNoArg(keyMapping, "key");
+        }
+        if (key == null) {
+            return false;
+        }
+
+        Object value = tryInvokeNoArg(key, "getValue");
+        if (value instanceof Integer) {
+            return ((Integer) value).intValue() == InputConstants.UNKNOWN.getValue();
+        }
+
+        return "key.keyboard.unknown".equals(String.valueOf(key));
+    }
+
+    private static Object tryInvokeNoArg(Object target, String methodName) {
+        if (target == null) {
+            return null;
+        }
+
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
     }
 
     @SuppressWarnings("null")

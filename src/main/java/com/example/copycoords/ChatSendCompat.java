@@ -8,67 +8,174 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 
 final class ChatSendCompat {
+    private static final int INVOCATION_NO_METHOD = 0;
+    private static final int INVOCATION_SUCCESS = 1;
+    private static final int INVOCATION_FAILED = -1;
+
+    private static String lastFailureReason = "unknown";
+
     private ChatSendCompat() {
+    }
+
+    static String getLastFailureReason() {
+        return lastFailureReason;
     }
 
     static boolean sendChat(Minecraft client, ClientPacketListener connection, String line) {
         if (line == null || line.isBlank()) {
+            lastFailureReason = "chat line is blank";
             return false;
         }
 
         LocalPlayer player = client == null ? null : client.player;
         Component preview = Component.literal(line);
 
-        return invokeVoid(connection, "sendChat", new Class<?>[] { String.class }, line)
-                || invokeVoid(player, "chat", new Class<?>[] { String.class }, line)
-                || invokeVoid(player, "chatSigned", new Class<?>[] { String.class, Component.class }, line, preview)
-                || invokeVoid(player, "chat", new Class<?>[] { String.class, Component.class }, line, preview)
-                || invokeVoid(connection, "sendChat", new Class<?>[] { String.class, Component.class }, line, preview);
+        boolean hadCompatibleMethod = false;
+        int status = invokeVoid(connection, "sendChat", new Class<?>[] { String.class }, line);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(connection, "sendChatMessage", new Class<?>[] { String.class }, line);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "chat", new Class<?>[] { String.class }, line);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "sendChatMessage", new Class<?>[] { String.class }, line);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "chatSigned", new Class<?>[] { String.class, Component.class }, line, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "chat", new Class<?>[] { String.class, Component.class }, line, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(connection, "sendChat", new Class<?>[] { String.class, Component.class }, line, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(connection, "sendChatMessage", new Class<?>[] { String.class, Component.class }, line, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        if (!hadCompatibleMethod) {
+            lastFailureReason = "no compatible chat send method found";
+        }
+        return false;
     }
 
     static boolean sendCommand(Minecraft client, ClientPacketListener connection, String command) {
         if (command == null || command.isBlank()) {
+            lastFailureReason = "command is blank";
             return false;
         }
 
         LocalPlayer player = client == null ? null : client.player;
         Component preview = Component.literal(command);
 
-        if (invokeVoid(connection, "sendCommand", new Class<?>[] { String.class }, command)
-                || invokeVoid(player, "command", new Class<?>[] { String.class }, command)
-                || invokeVoid(player, "commandSigned", new Class<?>[] { String.class, Component.class }, command, preview)
-                || invokeVoid(connection, "sendCommand", new Class<?>[] { String.class, Component.class }, command, preview)) {
+        boolean hadCompatibleMethod = false;
+        int status = invokeVoid(connection, "sendCommand", new Class<?>[] { String.class }, command);
+        if (status == INVOCATION_SUCCESS) {
             return true;
         }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
 
-        return invokeBoolean(player, "commandUnsigned", new Class<?>[] { String.class }, command);
+        status = invokeVoid(connection, "sendCommandMessage", new Class<?>[] { String.class }, command);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "command", new Class<?>[] { String.class }, command);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "sendCommand", new Class<?>[] { String.class }, command);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(player, "commandSigned", new Class<?>[] { String.class, Component.class }, command, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(connection, "sendCommand", new Class<?>[] { String.class, Component.class }, command, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeVoid(connection, "sendCommandMessage", new Class<?>[] { String.class, Component.class }, command, preview);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        status = invokeBoolean(player, "commandUnsigned", new Class<?>[] { String.class }, command);
+        if (status == INVOCATION_SUCCESS) {
+            return true;
+        }
+        hadCompatibleMethod |= status != INVOCATION_NO_METHOD;
+
+        if (!hadCompatibleMethod) {
+            lastFailureReason = "no compatible command send method found";
+        }
+        return false;
     }
 
-    private static boolean invokeVoid(Object target, String methodName, Class<?>[] parameterTypes, Object... args) {
+    private static int invokeVoid(Object target, String methodName, Class<?>[] parameterTypes, Object... args) {
         Method method = findMethod(target, methodName, parameterTypes);
         if (method == null) {
-            return false;
+            return INVOCATION_NO_METHOD;
         }
 
         try {
             method.invoke(target, args);
-            return true;
-        } catch (ReflectiveOperationException ignored) {
-            return false;
+            return INVOCATION_SUCCESS;
+        } catch (ReflectiveOperationException error) {
+            lastFailureReason = methodName + " invocation failed: " + error.getClass().getSimpleName();
+            return INVOCATION_FAILED;
         }
     }
 
-    private static boolean invokeBoolean(Object target, String methodName, Class<?>[] parameterTypes, Object... args) {
+    private static int invokeBoolean(Object target, String methodName, Class<?>[] parameterTypes, Object... args) {
         Method method = findMethod(target, methodName, parameterTypes);
         if (method == null) {
-            return false;
+            return INVOCATION_NO_METHOD;
         }
 
         try {
             Object result = method.invoke(target, args);
-            return result instanceof Boolean && (Boolean) result;
-        } catch (ReflectiveOperationException ignored) {
-            return false;
+            return result instanceof Boolean && (Boolean) result ? INVOCATION_SUCCESS : INVOCATION_FAILED;
+        } catch (ReflectiveOperationException error) {
+            lastFailureReason = methodName + " invocation failed: " + error.getClass().getSimpleName();
+            return INVOCATION_FAILED;
         }
     }
 

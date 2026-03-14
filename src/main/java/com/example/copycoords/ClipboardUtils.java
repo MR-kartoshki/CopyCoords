@@ -6,7 +6,7 @@ import java.io.OutputStream;
 public class ClipboardUtils {
 
     private static String getOperatingSystem() {
-        String osName = System.getProperty("os.name").toLowerCase();
+        String osName = System.getProperty("os.name", "unknown").toLowerCase();
         if (osName.contains("win")) {
             return "windows";
         } else if (osName.contains("mac")) {
@@ -42,8 +42,12 @@ public class ClipboardUtils {
     }
 
     private static Process copyToClipboardWindows(String text) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "echo " + text + " | clip.exe");
+        ProcessBuilder pb = new ProcessBuilder("clip.exe");
         Process process = pb.start();
+        try (OutputStream os = process.getOutputStream()) {
+            os.write(text.getBytes());
+            os.flush();
+        }
         return process;
     }
 

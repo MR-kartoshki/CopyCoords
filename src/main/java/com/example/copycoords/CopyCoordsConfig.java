@@ -67,7 +67,7 @@ public class CopyCoordsConfig {
                 CopyCoordsConfig config = GSON.fromJson(json, CopyCoordsConfig.class);
                 if (config != null) {
                     if (raw == null || !raw.has("instantChatEnabled")) {
-                        config.instantChatEnabled = true;
+                        config.instantChatEnabled = false;
                     }
                     if (raw == null || !raw.has("decimalPlaces")) {
                         config.decimalPlaces = DEFAULT_DECIMAL_PLACES;

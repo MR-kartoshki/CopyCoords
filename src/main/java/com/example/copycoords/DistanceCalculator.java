@@ -8,10 +8,10 @@ public class DistanceCalculator {
         public final double totalDistance;       // 3D Euclidean distance
         public final double bearing;             // Angle in degrees (0-360), 0 = North, 90 = East, 180 = South, 270 = West
         public final String direction;           // Cardinal direction (N, NE, E, SE, S, SW, W, NW)
-        public final int blocksTravelledHorizontal; // Blocks to travel horizontally (Manhattan)
+        public final long blocksTravelledHorizontal; // Blocks to travel horizontally (Manhattan)
         
-        public DistanceResult(double horizontalDistance, double verticalDistance, double totalDistance, 
-                            double bearing, String direction, int blocksTravelledHorizontal) {
+        public DistanceResult(double horizontalDistance, double verticalDistance, double totalDistance,
+                    double bearing, String direction, long blocksTravelledHorizontal) {
             this.horizontalDistance = horizontalDistance;
             this.verticalDistance = verticalDistance;
             this.totalDistance = totalDistance;
@@ -36,7 +36,7 @@ public class DistanceCalculator {
 
         String direction = getCardinalDirection(bearing);
 
-        int blocksTravelledHorizontal = (int) (Math.abs(dx) + Math.abs(dz));
+        long blocksTravelledHorizontal = Math.abs((long) x2 - x1) + Math.abs((long) z2 - z1);
         
         return new DistanceResult(horizontalDistance, verticalDistance, totalDistance, bearing, 
                                 direction, blocksTravelledHorizontal);

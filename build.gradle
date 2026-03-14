@@ -1,4 +1,3 @@
-// fuck gradle frfr 
 import java.util.Properties
 
 plugins {
@@ -6,15 +5,19 @@ plugins {
     id 'dev.kikugie.stonecutter'
     id 'maven-publish'
     id 'com.modrinth.minotaur' version '2.8.10'
-    id 'io.github.themrmilchmann.curseforge-publish' version '0.8.0'
+    id 'io.github.themrmilchmann.curseforge-publish' version '0.8.0' apply false
 }
 
-// Conditionally apply CurseForge plugin (for potential future use cases)
-// Note: Plugin is unconditionally loaded above, config block always runs
+// Build script sections: task-based plugins, version matrix, build configuration, and publishing.
+
+// Apply CurseForge plugin only for CurseForge-oriented tasks.
 def requestedTasks = gradle.startParameter.taskNames.collect { it.toLowerCase() }
 def wantsCurseforge = requestedTasks.any { it.contains('curseforge') }
+if (wantsCurseforge) {
+    apply plugin: 'io.github.themrmilchmann.curseforge-publish'
+}
 
-// Version mapping for Minecraft versions and their associated dependencies
+// Version mapping for Minecraft versions and associated dependencies.
 ext.gameVersions = [
     '1.19': [
         fabric_api: '0.58.0+1.19',
@@ -162,7 +165,7 @@ ext.gameVersions = [
     ]
 ]
 
-// Default/active version for local development
+// Default and active version for local development.
 String defaultVersion = '1.21.11'
 def scExt = project.extensions.findByName('stonecutter')
 def scVersion = scExt?.current?.version
@@ -170,17 +173,17 @@ String activeVersion = project.findProperty('MC_VERSION')
     ?: (scVersion ?: (ext.gameVersions.containsKey(project.name) ? project.name : defaultVersion))
 println "Building for Minecraft version: ${activeVersion}"
 
-// Meta properties
+// Project metadata.
 group = project.maven_group
 version = project.mod_version
 
-// Get the active version's dependency specs
+// Resolve dependency set for the active version.
 def versionDeps = ext.gameVersions[activeVersion]
 if (!versionDeps) {
     throw new GradleException("Unknown Minecraft version: ${activeVersion}. Supported versions: ${ext.gameVersions.keySet()}")
 }
 
-// Configure base name to include active version
+// Include active version in the artifact base name.
 base {
     archivesName = project.archives_base_name + "+${activeVersion}"
 }
@@ -283,7 +286,7 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << "-Xlint:deprecation"
 }
 
-// Verification task to ensure Mojang mappings are used (NO YARN)
+// Verify all projects use Mojang mappings (no Yarn).
 tasks.register("verifyMojangMappings") {
     group = "verification"
     description = "Verifies that all projects use officialMojangMappings and not Yarn"
@@ -321,7 +324,7 @@ tasks.register("verifyMojangMappings") {
         results.each { println it }
         
         println "="*60
-        println "SOURCE: build.gradle line 153 declares: loom.officialMojangMappings()"
+        println "SOURCE: dependencies block declares loom.officialMojangMappings()"
         println "APPLIED TO: Root project (inherited by all Stonecutter subprojects)"
         println "VERSIONS COVERED: 1.19, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.20, 1.20.1, 1.20.2, 1.20.3, 1.20.4, 1.20.5, 1.20.6, 1.21, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11"
         println "="*60
@@ -334,7 +337,7 @@ tasks.register("verifyMojangMappings") {
     }
 }
 
-// Make build tasks depend on mappings verification
+// Ensure build depends on mappings verification.
 tasks.named("build").configure {
     dependsOn "verifyMojangMappings"
 }
@@ -366,7 +369,7 @@ tasks.named("clean").configure {
     delete file("bin")
 }
 
-// Version bump utility
+// Version bump helpers.
 def bumpVersion(String part) {
     def propsFile = file("gradle.properties")
     def props = new Properties()
@@ -403,7 +406,7 @@ tasks.register("bumpPatch") { doLast { bumpVersion("patch") } }
 tasks.register("bumpMinor") { doLast { bumpVersion("minor") } }
 tasks.register("bumpMajor") { doLast { bumpVersion("major") } }
 
-// Extract only the current version's changelog section
+// Extract only the current changelog section.
 def getCurrentChangelog() {
     def changelog = rootProject.file("CHANGELOG.md")
     if (!changelog.exists()) return ""
@@ -421,7 +424,7 @@ def getCurrentChangelog() {
     return current.join("\n")
 }
 
-// Task to write current changelog to file for GitHub Release
+// Write the current changelog section to a release file.
 tasks.register("writeCurrentChangelog") {
     doLast {
         def changelogContent = getCurrentChangelog()
@@ -432,8 +435,8 @@ tasks.register("writeCurrentChangelog") {
     }
 }
 
-// ===== Modrinth Publishing (Minotaur) =====
-// Each Stonecutter subproject uploads its own JAR for its MC version
+// ===== Publishing =====
+// Each Stonecutter subproject publishes its own remapped JAR for its MC version.
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "GzPkXb2a"
@@ -449,33 +452,8 @@ modrinth {
 
 tasks.modrinth.dependsOn(tasks.remapJar)
 
-// ===== CurseForge Publishing (Disabled) =====
-// The CurseForge Gradle plugin's gameVersions requires GameVersion objects,
-// not plain strings, and the plugin doesn't provide an easy way to construct them.
-// For now, focus on Modrinth which works correctly.
-// To publish to CurseForge, use the web interface or a different approach.
-/*
-curseforge {
-    apiToken = System.getenv("CURSEFORGE_API_TOKEN") ?: ""
+// CurseForge publishing is intentionally not configured in this script.
+// Use the web interface when publishing to CurseForge.
 
-    publications {
-        register("curseforge") {
-            projectId = "1463555"
-
-            artifacts.register("main") {
-                from(tasks.named("remapJar"))
-                displayName = "CopyCoords ${project.mod_version} for MC ${activeVersion}"
-                releaseType = "release"
-
-                changelog {
-                    format = "markdown"
-                    content = getCurrentChangelog()
-                }
-            }
-        }
-    }
-}
-*/
-
-// Default build behavior
+// Default build behavior.
 build.dependsOn remapJar
