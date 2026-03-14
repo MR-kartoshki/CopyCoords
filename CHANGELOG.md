@@ -2,6 +2,12 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.12.3] - 2026-03-14
+
+### Fixed 
+
+- Fixed name-mapping mismatch at runtime. This caused the instant send to chat keybind to not work.
+
 ## [1.12.2] - 2026-03-14
 
 ### Fixed

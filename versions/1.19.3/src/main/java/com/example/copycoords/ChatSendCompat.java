@@ -13,7 +13,7 @@ final class ChatSendCompat {
         return lastFailureReason;
     }
 
-    // Sends a plain chat message through the current packet listener.
+    // Sends a plain chat message through the packet listener API in 1.19.3.
     static boolean sendChat(Minecraft client, ClientPacketListener connection, String line) {
         if (line == null || line.isBlank()) {
             lastFailureReason = "chat line is blank";
@@ -34,7 +34,7 @@ final class ChatSendCompat {
         }
     }
 
-    // Sends a slash command payload through the current packet listener.
+    // Sends a slash command through the packet listener API in 1.19.3.
     static boolean sendCommand(Minecraft client, ClientPacketListener connection, String command) {
         if (command == null || command.isBlank()) {
             lastFailureReason = "command is blank";

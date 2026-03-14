@@ -78,7 +78,6 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .build());
 
             String initialPreview = CopyCoords.previewForTemplate(CopyCoords.config.coordinateTemplate);
-            final Object[] templateEntryRef = new Object[1];
             Object templateEntryObj = entryBuilder.startStrField(
                             Component.literal("Coordinate template"),
                             CopyCoords.config.coordinateTemplate)
@@ -86,20 +85,10 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setTooltip(Component.literal("Empty to use Coordinate format above. Placeholders: {x},{y},{z},{dimension},{dimName}" +
                             (initialPreview.isEmpty() ? "" : "\nPreview: " + initialPreview)))
                     .setSaveConsumer(newValue -> {
+                        // Saves the template text; preview tooltip updates on next config screen open.
                         CopyCoords.config.coordinateTemplate = newValue;
-
-                        try {
-                            Object entry = templateEntryRef[0];
-                            entry.getClass()
-                                    .getMethod("setTooltip", Component.class)
-                                    .invoke(entry, Component.literal("Empty to use Coordinate format above. Placeholders: {x},{y},{z},{dimension},{dimName}" +
-                                            (CopyCoords.previewForTemplate(newValue).isEmpty() ? "" : "\nPreview: " + CopyCoords.previewForTemplate(newValue))));
-                        } catch (Throwable ignored) {
-
-                        }
                     })
                     .build();
-            templateEntryRef[0] = templateEntryObj;
             general.addEntry((AbstractConfigListEntry<?>)templateEntryObj);
 
             general.addEntry(entryBuilder.startBooleanToggle(

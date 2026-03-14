@@ -1,7 +1,5 @@
 package com.example.copycoords;
 
-import java.lang.reflect.Method;
-
 import org.lwjgl.glfw.GLFW;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -77,47 +75,9 @@ public class CopyCoordsBind {
         return new KeyMapping(translationKey, InputConstants.Type.KEYSYM, keyCode, CATEGORY);
     }
 
+    // Returns true when the keybind is set to the UNKNOWN key code.
     private static boolean isKeyMappingUnbound(KeyMapping keyMapping) {
-        if (keyMapping == null) {
-            return false;
-        }
-
-        try {
-            Method isUnbound = keyMapping.getClass().getMethod("isUnbound");
-            Object result = isUnbound.invoke(keyMapping);
-            if (result instanceof Boolean) {
-                return (Boolean) result;
-            }
-        } catch (ReflectiveOperationException ignored) {
-        }
-
-        Object key = tryInvokeNoArg(keyMapping, "getKey");
-        if (key == null) {
-            key = tryInvokeNoArg(keyMapping, "key");
-        }
-        if (key == null) {
-            return false;
-        }
-
-        Object value = tryInvokeNoArg(key, "getValue");
-        if (value instanceof Integer) {
-            return ((Integer) value).intValue() == InputConstants.UNKNOWN.getValue();
-        }
-
-        return "key.keyboard.unknown".equals(String.valueOf(key));
-    }
-
-    private static Object tryInvokeNoArg(Object target, String methodName) {
-        if (target == null) {
-            return null;
-        }
-
-        try {
-            Method method = target.getClass().getMethod(methodName);
-            return method.invoke(target);
-        } catch (ReflectiveOperationException ignored) {
-            return null;
-        }
+        return keyMapping != null && keyMapping.isUnbound();
     }
 
     @SuppressWarnings("null")

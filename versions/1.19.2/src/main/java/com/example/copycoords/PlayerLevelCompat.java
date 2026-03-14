@@ -20,7 +20,7 @@ final class PlayerLevelCompat {
     }
 
     private static Object getDimensionKey(Player player) {
-        // Reads the active level directly from the entity API.
+        // Uses the 1.19.x typed world accessor.
         Level level = player == null ? null : player.getLevel();
         return level == null ? null : level.dimension();
     }
