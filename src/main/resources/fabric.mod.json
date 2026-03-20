@@ -5,7 +5,7 @@
   "name": "CopyCoords",
   "description": "CopyCoords is a small Fabric mod for Minecraft that makes it quick and easy to get, share, and convert coordinates.",
   "authors": ["freddy._.fazbear (Discord)","MR-Kartoshki (GitHub)"],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "icon": "assets/copycoords/icon.png",
   "contact": {
     "issues": "https://github.com/MR-kartoshki/copycoords/issues",
