@@ -3,6 +3,7 @@ package com.example.copycoords;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -96,6 +97,17 @@ public class CopyCoords implements ClientModInitializer {
                     .suggests(dimSuggestions)
                     .executes(context -> executeCopyCoordsWithGoal(context));
             builder.then(copyGoalArg);
+                builder.then(ClientCommandManager.literal("status")
+                    .executes(context -> executeConfigStatus()));
+                builder.then(ClientCommandManager.literal("hintunbound")
+                    .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                        .executes(context -> executeSetShowInstantChatSendUnboundHint(
+                            BoolArgumentType.getBool(context, "enabled")))));
+                builder.then(ClientCommandManager.literal("config")
+                    .then(ClientCommandManager.literal("showInstantChatSendUnboundHint")
+                        .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                            .executes(context -> executeSetShowInstantChatSendUnboundHint(
+                                BoolArgumentType.getBool(context, "enabled"))))));
             dispatcher.register(builder);
 
             LiteralArgumentBuilder<FabricClientCommandSource> cc = ClientCommandManager.literal("cc");
@@ -362,6 +374,36 @@ public class CopyCoords implements ClientModInitializer {
         String coordString = formatCoordinates(x, y, z, dimensionId);
 
         return sendCoordsMessage(target, coordString);
+    }
+
+    private int executeSetShowInstantChatSendUnboundHint(boolean enabled) {
+        if (config == null) {
+            config = CopyCoordsConfig.load();
+        }
+
+        config.showInstantChatSendUnboundHint = enabled;
+        config.save();
+        Minecraft.getInstance().gui.getChat().addMessage(
+                Component.literal("[CopyCoords] Show instant-send unbound hint: " + enabled));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int executeConfigStatus() {
+        if (config == null) {
+            config = CopyCoordsConfig.load();
+        }
+
+        String keybindState = CopyCoordsBind.isInstantChatSendKeybindUnbound() ? "unbound" : "bound";
+        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("[CopyCoords] Status"));
+        Minecraft.getInstance().gui.getChat().addMessage(
+                Component.literal(" - instantChatEnabled: " + config.instantChatEnabled));
+        Minecraft.getInstance().gui.getChat().addMessage(
+                Component.literal(" - showInstantChatSendUnboundHint: " + config.showInstantChatSendUnboundHint));
+        Minecraft.getInstance().gui.getChat().addMessage(
+                Component.literal(" - pasteToChatInput: " + config.pasteToChatInput));
+        Minecraft.getInstance().gui.getChat().addMessage(
+                Component.literal(" - instantChatSendKey: " + keybindState));
+        return Command.SINGLE_SUCCESS;
     }
 
     private LiteralArgumentBuilder<FabricClientCommandSource> buildBookmarkCommand(

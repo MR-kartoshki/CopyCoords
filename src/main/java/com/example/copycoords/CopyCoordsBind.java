@@ -37,6 +37,8 @@ public class CopyCoordsBind {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!INSTANT_KEYBIND_HINT_SHOWN && client != null && client.player != null
+                    && CopyCoords.config != null
+                    && CopyCoords.config.showInstantChatSendUnboundHint
                     && isKeyMappingUnbound(instantChatSendKeyBinding)) {
                 client.gui.getChat().addMessage(Component.translatable("message.copycoords.instant_chat_send_unbound"));
                 INSTANT_KEYBIND_HINT_SHOWN = true;
@@ -76,6 +78,10 @@ public class CopyCoordsBind {
     // Returns true when the keybind is set to the UNKNOWN key code.
     private static boolean isKeyMappingUnbound(KeyMapping keyMapping) {
         return keyMapping != null && keyMapping.isUnbound();
+    }
+
+    public static boolean isInstantChatSendKeybindUnbound() {
+        return isKeyMappingUnbound(instantChatSendKeyBinding);
     }
 
     @SuppressWarnings("null")

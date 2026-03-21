@@ -19,6 +19,8 @@
   "option.copycoords.pasteToChatInput@Tooltip": "Falls aktiviert, werden kopierte Koordinaten in das Chat‑Eingabefeld eingefügt, statt sie zu senden oder zu kopieren.",
   "option.copycoords.instantChatEnabled": "Sofortiges Senden im Chat aktivieren",
   "option.copycoords.instantChatEnabled@Tooltip": "Wenn aktiviert, senden /cc und /copycoords ihre Koordinatenausgabe zusätzlich in den Server-Chat.",
+  "option.copycoords.showInstantChatSendUnboundHint": "Hinweis bei unbelegter Instant-Senden-Taste anzeigen",
+  "option.copycoords.showInstantChatSendUnboundHint@Tooltip": "Wenn aktiviert, wird einmal pro Sitzung ein Chathinweis angezeigt, wenn die Instant-Senden-Taste nicht belegt ist.",
 
   "message.copycoords.command.no_player": "Position kann nicht ausgelesen werden – kein Spieler geladen.",
   "message.copycoords.command.coords_printed": "Deine aktuellen Koordinaten sind: %s",

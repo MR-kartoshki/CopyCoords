@@ -17,6 +17,8 @@
   "option.copycoords.pasteToChatInput@Tooltip": "Si activé, les coordonnées copiées seront placées dans la zone de saisie du chat au lieu d'être envoyées ou copiées.",
   "option.copycoords.instantChatEnabled": "Activer l'envoi instantané au chat",
   "option.copycoords.instantChatEnabled@Tooltip": "Si activé, /cc et /copycoords enverront aussi leur sortie de coordonnées dans le chat du serveur.",
+  "option.copycoords.showInstantChatSendUnboundHint": "Afficher l'avertissement de touche non assignée pour l'envoi instantané",
+  "option.copycoords.showInstantChatSendUnboundHint@Tooltip": "Si activé, affiche un message de chat une fois par session quand la touche d'envoi instantané n'est pas assignée.",
   "option.copycoords.coordinateFormat@Tooltip": "Choisissez comment les coordonnées sont affichées : Espace (100 64 200), Crochets ([100, 64, 200]) ou XYZ (X:100 Y:64 Z:200).",
   "message.copycoords.command.no_player": "Impossible de lire la position – aucun joueur chargé.",
   "message.copycoords.command.coords_printed": "Vos coordonnées actuelles sont : %s",

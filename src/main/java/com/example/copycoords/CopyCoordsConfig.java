@@ -21,6 +21,7 @@ public class CopyCoordsConfig {
     public boolean showDimensionInCoordinates = true;
     // disabled by default to avoid unexpected chat spam
     public boolean instantChatEnabled = false;
+    public boolean showInstantChatSendUnboundHint = true;
     public boolean pasteToChatInput = false;
     public String coordinateFormat = "space";
     public int decimalPlaces = DEFAULT_DECIMAL_PLACES;
@@ -68,6 +69,9 @@ public class CopyCoordsConfig {
                 if (config != null) {
                     if (raw == null || !raw.has("instantChatEnabled")) {
                         config.instantChatEnabled = false;
+                    }
+                    if (raw == null || !raw.has("showInstantChatSendUnboundHint")) {
+                        config.showInstantChatSendUnboundHint = true;
                     }
                     if (raw == null || !raw.has("decimalPlaces")) {
                         config.decimalPlaces = DEFAULT_DECIMAL_PLACES;

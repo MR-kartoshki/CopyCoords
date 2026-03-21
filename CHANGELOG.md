@@ -2,6 +2,24 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.13.0] - 2026-03-21
+
+### Added
+
+- New config option: `Show instant send key unbound hint`.
+  - Controls whether the chat hint is shown when the Instant Chat Send keybind is unbound.
+  - Default value is `true`.
+- New `/copycoords` utility commands:
+  - `/copycoords status` to display instant chat related settings and instant-send keybind state.
+  - `/copycoords hintunbound <true|false>` and `/copycoords config showInstantChatSendUnboundHint <true|false>` to change the hint option in-game.
+
+### Changed
+
+- Removed Fabric API version constraints from manifest dependencies.
+  - `Fabric API` is still required, but no minimum version is forced.
+- Localized instant-chat config option labels/tooltips in Mod Menu via language keys.
+- Added missing translation keys for the new instant-send hint option across all shipped locales.
+
 ## [1.12.5] - 2026-03-20
 
 ### Added

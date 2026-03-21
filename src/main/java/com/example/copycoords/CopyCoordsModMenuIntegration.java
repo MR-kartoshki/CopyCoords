@@ -100,11 +100,19 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .build());
 
             general.addEntry(entryBuilder.startBooleanToggle(
-                            Component.literal("Enable instant chat send"),
+                            Component.translatable("option.copycoords.instantChatEnabled"),
                             CopyCoords.config.instantChatEnabled)
                     .setDefaultValue(false)
-                    .setTooltip(Component.literal("If enabled, /cc and /copycoords also send their coordinate output to server chat."))
+                    .setTooltip(Component.translatable("option.copycoords.instantChatEnabled@Tooltip"))
                     .setSaveConsumer(newValue -> CopyCoords.config.instantChatEnabled = newValue)
+                    .build());
+
+            general.addEntry(entryBuilder.startBooleanToggle(
+                            Component.translatable("option.copycoords.showInstantChatSendUnboundHint"),
+                            CopyCoords.config.showInstantChatSendUnboundHint)
+                    .setDefaultValue(true)
+                    .setTooltip(Component.translatable("option.copycoords.showInstantChatSendUnboundHint@Tooltip"))
+                    .setSaveConsumer(newValue -> CopyCoords.config.showInstantChatSendUnboundHint = newValue)
                     .build());
 
             ConfigCategory mapLinks = builder.getOrCreateCategory(Component.literal("Map Links"));
