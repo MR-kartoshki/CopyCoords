@@ -206,6 +206,13 @@ int requiredJavaVersion = java17Versions.contains(activeVersion) ? 17 : 21
 if (activeVersion.startsWith('26.')) {
     requiredJavaVersion = 25
 }
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(requiredJavaVersion)
+    }
+}
+
 int requiredClassMajorVersion = requiredJavaVersion == 17 ? 61 : (requiredJavaVersion == 21 ? 65 : 69)
 
 // Project metadata.
