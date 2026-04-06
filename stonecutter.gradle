@@ -2,82 +2,59 @@ plugins {
     id 'dev.kikugie.stonecutter'
 }
 
-stonecutter.active "1.21.11"
+stonecutter.active "26.1.1"
+
+def allVersions = [
+    '26.1', '26.1.1'
+]
 
 // Aggregate task: builds all version JARs
 tasks.register("buildAllVersions") {
     group = "build"
     description = "Build all Stonecutter version JARs"
     
-    dependsOn ':1.19:build',
-              ':1.19.1:build',
-              ':1.19.2:build',
-              ':1.19.3:build',
-              ':1.19.4:build',
-              ':1.20:build',
-              ':1.20.1:build',
-              ':1.20.2:build',
-              ':1.20.3:build',
-              ':1.20.4:build',
-              ':1.20.5:build',
-              ':1.20.6:build',
-              ':1.21:build',
-              ':1.21.1:build',
-              ':1.21.2:build',
-              ':1.21.3:build',
-              ':1.21.4:build',
-              ':1.21.5:build',
-              ':1.21.6:build',
-              ':1.21.7:build',
-              ':1.21.8:build',
-              ':1.21.9:build',
-              ':1.21.10:build',
-              ':1.21.11:build'
+    dependsOn allVersions.collect { ":${it}:build" }
 }
 
 
-// New aggregate task: publish only the REMAPPED jars for all Stonecutter targets to Modrinth
+// New aggregate task: publish artifacts for all Stonecutter targets to Modrinth
 tasks.register("publishAllModrinth") {
     group = "publishing"
-    description = "Publish remapped jars for all Stonecutter targets to Modrinth (remapJar only)"
+    description = "Publish Stonecutter targets to Modrinth using jar artifacts"
 
-    def versions = [
-        '1.19', '1.19.1', '1.19.2', '1.19.3', '1.19.4', '1.20', '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6', '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6',
-        '1.21.7', '1.21.8', '1.21.9', '1.21.10', '1.21.11'
-    ]
-
-    // Ensure remapJar runs for every target and then invoke each subproject's modrinth task
-    versions.each { v ->
-        dependsOn ":${v}:remapJar"
+    // Ensure each target artifact task runs before invoking each subproject's modrinth task
+    allVersions.each { v ->
+        def artifactTask = 'jar'
+        dependsOn ":${v}:${artifactTask}"
         dependsOn ":${v}:modrinth"
     }
 }
 
 // Configure each Stonecutter subproject's Modrinth upload at configuration time
 // (configure the :<version>:modrinth TASK where available; guarded to skip missing tasks)
-[ '1.19', '1.19.1', '1.19.2', '1.19.3', '1.19.4', '1.20', '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6', '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6',
-  '1.21.7', '1.21.8', '1.21.9', '1.21.10', '1.21.11' ].each { v ->
+allVersions.each { v ->
     def p = project(":${v}")
+    def artifactTaskName = 'jar'
 
-    def hasRemap = p.tasks.findByName('remapJar') != null
+    def hasArtifactTask = p.tasks.findByName(artifactTaskName) != null
     def hasModTask = p.tasks.findByName('modrinth') != null
     def hasModExt = p.extensions.findByName('modrinth') != null
 
     // Prefer configuring the modrinth TASK itself (at configuration time)
-    if (hasModTask && hasRemap) {
-        def remapProv = p.tasks.named('remapJar')
+    if (hasModTask && hasArtifactTask) {
+        def artifactProv = p.tasks.named(artifactTaskName)
         p.tasks.named('modrinth').configure { modTask ->
-            dependsOn remapProv
+            dependsOn artifactProv
         }
         // also mirror on extension if present (extension will always accept these)
         if (hasModExt) {
-            p.modrinth.uploadFile = p.tasks.named('remapJar').flatMap { it.archiveFile }
+            p.modrinth.uploadFile = artifactProv.flatMap { it.archiveFile }
             p.modrinth.versionNumber = "${project.mod_version}+${v}"
             p.modrinth.gameVersions = [v]
         }
-    } else if (hasModExt && hasRemap) {
+    } else if (hasModExt && hasArtifactTask) {
         // No modrinth task, but extension exists — configure extension safely
-        p.modrinth.uploadFile = p.tasks.named('remapJar').flatMap { it.archiveFile }
+        p.modrinth.uploadFile = p.tasks.named(artifactTaskName).flatMap { it.archiveFile }
         p.modrinth.versionNumber = "${project.mod_version}+${v}"
         p.modrinth.gameVersions = [v]
     } else {

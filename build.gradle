@@ -1,7 +1,7 @@
 import java.util.Properties
 
 plugins {
-    id 'fabric-loom' version '1.15.0-alpha.6'
+    id 'net.fabricmc.fabric-loom' version '1.15.5'
     id 'dev.kikugie.stonecutter'
     id 'maven-publish'
     id 'com.modrinth.minotaur' version '2.8.10'
@@ -30,6 +30,22 @@ ext.gameVersions = [
         fabric_loader: '0.18.4',
         cloth_config: '8.3.134',
         modmenu: '4.0.5'
+    ],
+    '26.1': [
+        fabric_api: '0.145.1+26.1',
+        command_api: '3.0.5+e2bdee7847',
+        key_mapping_api: '2.0.4+e2bdee7847',
+        fabric_loader: '0.18.4',
+        cloth_config: '26.1.154',
+        modmenu: '18.0.0-alpha.8'
+    ],
+    '26.1.1': [
+        fabric_api: '0.145.4+26.1.1',
+        command_api: '3.0.5+e2bdee78b3',
+        key_mapping_api: '2.0.4+e2bdee78b3',
+        fabric_loader: '0.18.4',
+        cloth_config: '26.1.154',
+        modmenu: '18.0.0-alpha.8'
     ],
     '1.19.2': [
         fabric_api: '0.77.0+1.19.2',
@@ -166,7 +182,7 @@ ext.gameVersions = [
 ]
 
 // Default and active version for local development.
-String defaultVersion = '1.21.11'
+String defaultVersion = '26.1.1'
 def scExt = project.extensions.findByName('stonecutter')
 def scVersion = scExt?.current?.version
 String configuredVersion = project.findProperty('MC_VERSION')?.toString()
@@ -187,7 +203,10 @@ def java17Versions = [
     '1.20.4'
 ] as Set
 int requiredJavaVersion = java17Versions.contains(activeVersion) ? 17 : 21
-int requiredClassMajorVersion = requiredJavaVersion == 17 ? 61 : 65
+if (activeVersion.startsWith('26.')) {
+    requiredJavaVersion = 25
+}
+int requiredClassMajorVersion = requiredJavaVersion == 17 ? 61 : (requiredJavaVersion == 21 ? 65 : 69)
 
 // Project metadata.
 group = project.maven_group
@@ -285,13 +304,18 @@ configurations.all {
 dependencies {
     // Use the active version's Minecraft
     minecraft "com.mojang:minecraft:${activeVersion}"
-    mappings loom.officialMojangMappings()
 
     // Load version-specific dependencies
-    modImplementation "net.fabricmc:fabric-loader:${versionDeps.fabric_loader}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${versionDeps.fabric_api}"
-    modImplementation "me.shedaniel.cloth:cloth-config-fabric:${versionDeps.cloth_config}"
-    modApi "maven.modrinth:modmenu:${versionDeps.modmenu}"
+    implementation "net.fabricmc:fabric-loader:${versionDeps.fabric_loader}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${versionDeps.fabric_api}"
+    if (versionDeps.command_api) {
+        implementation "net.fabricmc.fabric-api:fabric-command-api-v2:${versionDeps.command_api}"
+    }
+    if (versionDeps.key_mapping_api) {
+        implementation "net.fabricmc.fabric-api:fabric-key-mapping-api-v1:${versionDeps.key_mapping_api}"
+    }
+    implementation "me.shedaniel.cloth:cloth-config-fabric:${versionDeps.cloth_config}"
+    implementation "maven.modrinth:modmenu:${versionDeps.modmenu}"
 }
 
 loom {
@@ -350,7 +374,7 @@ tasks.register("verifyMojangMappings") {
         println "=" * 60
         println "SOURCE: dependencies block declares loom.officialMojangMappings()"
         println "APPLIED TO: Root project (inherited by all Stonecutter subprojects)"
-        println "VERSIONS COVERED: 1.19, 1.19.1, 1.19.2, 1.19.3, 1.19.4, 1.20, 1.20.1, 1.20.2, 1.20.3, 1.20.4, 1.20.5, 1.20.6, 1.21, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11"
+        println "VERSIONS COVERED: ${ext.gameVersions.keySet().join(', ')}"
         println "=" * 60
 
         if (failed) {
@@ -504,24 +528,26 @@ tasks.register("writeCurrentChangelog") {
 }
 
 // ===== Publishing =====
-// Each Stonecutter subproject publishes its own remapped JAR for its MC version.
+// Each Stonecutter subproject publishes its own JAR for its MC version.
+def publishArtifactTask = tasks.named('jar')
+
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "GzPkXb2a"
     versionNumber = "${project.mod_version}+${activeVersion}"
     versionName = "CopyCoords ${project.mod_version} for MC ${activeVersion}"
     versionType = "release"
-    uploadFile = tasks.remapJar.archiveFile
+    uploadFile = publishArtifactTask.flatMap { it.archiveFile }
     gameVersions = [activeVersion]
     loaders = ["fabric"]
     changelog = getCurrentChangelog()
     syncBodyFrom = rootProject.file("README.md").text
 }
 
-tasks.modrinth.dependsOn(tasks.remapJar)
+tasks.modrinth.dependsOn(publishArtifactTask)
 
 // CurseForge publishing is intentionally not configured in this script.
 // Use the web interface when publishing to CurseForge.
 
 // Default build behavior.
-build.dependsOn remapJar
+build.dependsOn publishArtifactTask

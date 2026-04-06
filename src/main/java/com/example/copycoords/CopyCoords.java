@@ -10,7 +10,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.loader.api.FabricLoader;
@@ -38,6 +38,14 @@ public class CopyCoords implements ClientModInitializer {
     private static final String NETHER_ID = Level.NETHER.toString();
     private static final String END_ID = Level.END.toString();
 
+    static void sendSystemMessage(Component message) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || message == null) {
+            return;
+        }
+        mc.player.sendSystemMessage(message);
+    }
+
     @Override
     @SuppressWarnings("null")
     public void onInitializeClient() {
@@ -46,10 +54,10 @@ public class CopyCoords implements ClientModInitializer {
         CopyCoordsBind.register();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            LiteralArgumentBuilder<FabricClientCommandSource> builder = ClientCommandManager.literal("copycoords");
+            LiteralArgumentBuilder<FabricClientCommandSource> builder = ClientCommands.literal("copycoords");
             builder.executes(context -> executeCopyCoords(context));
 
-            LiteralArgumentBuilder<FabricClientCommandSource> conv = ClientCommandManager.literal("convertcoords");
+            LiteralArgumentBuilder<FabricClientCommandSource> conv = ClientCommands.literal("convertcoords");
 
             SuggestionProvider<FabricClientCommandSource> dimSuggestions = (ctx, sb) -> {
                 sb.suggest("overworld");
@@ -79,12 +87,12 @@ public class CopyCoords implements ClientModInitializer {
                 SharedSuggestionProvider.suggest(pctx.getSource().getOnlinePlayerNames(), psb);
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> coordArg = 
-                ClientCommandManager.argument("coordinates", StringArgumentType.greedyString())
+                ClientCommands.argument("coordinates", StringArgumentType.greedyString())
                     .suggests(coordSuggestions)
                     .executes(context -> executeConvertCoords(context));
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> goalArg = 
-                ClientCommandManager.argument("goal", StringArgumentType.word())
+                ClientCommands.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
                     .then(coordArg)
                     .executes(context -> executeConvertCoords(context));
@@ -93,41 +101,41 @@ public class CopyCoords implements ClientModInitializer {
             dispatcher.register(conv);
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> copyGoalArg =
-                ClientCommandManager.argument("goal", StringArgumentType.word())
+                ClientCommands.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
                     .executes(context -> executeCopyCoordsWithGoal(context));
             builder.then(copyGoalArg);
-                builder.then(ClientCommandManager.literal("status")
+                builder.then(ClientCommands.literal("status")
                     .executes(context -> executeConfigStatus()));
-                builder.then(ClientCommandManager.literal("hintunbound")
-                    .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                builder.then(ClientCommands.literal("hintunbound")
+                    .then(ClientCommands.argument("enabled", BoolArgumentType.bool())
                         .executes(context -> executeSetShowInstantChatSendUnboundHint(
                             BoolArgumentType.getBool(context, "enabled")))));
-                builder.then(ClientCommandManager.literal("config")
-                    .then(ClientCommandManager.literal("showInstantChatSendUnboundHint")
-                        .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                builder.then(ClientCommands.literal("config")
+                    .then(ClientCommands.literal("showInstantChatSendUnboundHint")
+                        .then(ClientCommands.argument("enabled", BoolArgumentType.bool())
                             .executes(context -> executeSetShowInstantChatSendUnboundHint(
                                 BoolArgumentType.getBool(context, "enabled"))))));
             dispatcher.register(builder);
 
-            LiteralArgumentBuilder<FabricClientCommandSource> cc = ClientCommandManager.literal("cc");
+            LiteralArgumentBuilder<FabricClientCommandSource> cc = ClientCommands.literal("cc");
             cc.executes(context -> executeCopyCoords(context));
             cc.then(copyGoalArg);
             dispatcher.register(cc);
 
-            LiteralArgumentBuilder<FabricClientCommandSource> copycoordinates = ClientCommandManager.literal("copycoordinates");
+            LiteralArgumentBuilder<FabricClientCommandSource> copycoordinates = ClientCommands.literal("copycoordinates");
             copycoordinates.executes(context -> executeCopyCoords(context));
             copycoordinates.then(copyGoalArg);
             dispatcher.register(copycoordinates);
 
-            LiteralArgumentBuilder<FabricClientCommandSource> msg = ClientCommandManager.literal("msgcoords");
+            LiteralArgumentBuilder<FabricClientCommandSource> msg = ClientCommands.literal("msgcoords");
             RequiredArgumentBuilder<FabricClientCommandSource, String> playerArg =
-                ClientCommandManager.argument("player", StringArgumentType.word())
+                ClientCommands.argument("player", StringArgumentType.word())
                     .suggests(playerSuggestions)
                     .executes(context -> executeMsgCoords(context));
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> msgGoalArg =
-                ClientCommandManager.argument("goal", StringArgumentType.word())
+                ClientCommands.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
                     .executes(context -> executeMsgCoordsWithGoal(context));
 
@@ -135,47 +143,47 @@ public class CopyCoords implements ClientModInitializer {
             msg.then(playerArg);
             dispatcher.register(msg);
 
-                LiteralArgumentBuilder<FabricClientCommandSource> history = ClientCommandManager.literal("coordshistory");
+                LiteralArgumentBuilder<FabricClientCommandSource> history = ClientCommands.literal("coordshistory");
                 history.executes(context -> executeHistoryList());
-                history.then(ClientCommandManager.literal("list")
+                history.then(ClientCommands.literal("list")
                     .executes(context -> executeHistoryList()));
-                history.then(ClientCommandManager.literal("clear")
+                history.then(ClientCommands.literal("clear")
                     .executes(context -> executeHistoryClear()));
-                history.then(ClientCommandManager.literal("copy")
-                    .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
+                history.then(ClientCommands.literal("copy")
+                    .then(ClientCommands.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryCopy(IntegerArgumentType.getInteger(context, "index")))));
-                history.then(ClientCommandManager.literal("remove")
-                    .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
+                history.then(ClientCommands.literal("remove")
+                    .then(ClientCommands.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryRemove(IntegerArgumentType.getInteger(context, "index")))));
-                history.then(ClientCommandManager.literal("menu")
-                    .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
+                history.then(ClientCommands.literal("menu")
+                    .then(ClientCommands.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryMenu(IntegerArgumentType.getInteger(context, "index")))));
                 dispatcher.register(history);
 
                 dispatcher.register(buildBookmarkCommand("coordsbookmark", bookmarkSuggestions));
                 dispatcher.register(buildBookmarkCommand("coordbookmark", bookmarkSuggestions));
 
-                LiteralArgumentBuilder<FabricClientCommandSource> distcalc = ClientCommandManager.literal("distcalc");
+                LiteralArgumentBuilder<FabricClientCommandSource> distcalc = ClientCommands.literal("distcalc");
                 
                 RequiredArgumentBuilder<FabricClientCommandSource, Integer> x1Arg =
-                    ClientCommandManager.argument("x1", IntegerArgumentType.integer())
-                        .then(ClientCommandManager.argument("y1", IntegerArgumentType.integer())
-                            .then(ClientCommandManager.argument("z1", IntegerArgumentType.integer())
-                                .then(ClientCommandManager.argument("x2", IntegerArgumentType.integer())
-                                    .then(ClientCommandManager.argument("y2", IntegerArgumentType.integer())
-                                        .then(ClientCommandManager.argument("z2", IntegerArgumentType.integer())
+                    ClientCommands.argument("x1", IntegerArgumentType.integer())
+                        .then(ClientCommands.argument("y1", IntegerArgumentType.integer())
+                            .then(ClientCommands.argument("z1", IntegerArgumentType.integer())
+                                .then(ClientCommands.argument("x2", IntegerArgumentType.integer())
+                                    .then(ClientCommands.argument("y2", IntegerArgumentType.integer())
+                                        .then(ClientCommands.argument("z2", IntegerArgumentType.integer())
                                             .executes(context -> executeDistanceCalc(context)))))));
                 
                 distcalc.then(x1Arg);
 
                 RequiredArgumentBuilder<FabricClientCommandSource, String> bm1Arg =
-                    ClientCommandManager.argument("bookmark1", StringArgumentType.string())
+                    ClientCommands.argument("bookmark1", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
-                        .then(ClientCommandManager.argument("bookmark2", StringArgumentType.string())
+                        .then(ClientCommands.argument("bookmark2", StringArgumentType.string())
                             .suggests(bookmarkSuggestions)
                             .executes(context -> executeDistanceCalcBookmarks(context)));
 
-                distcalc.then(ClientCommandManager.literal("bookmarks")
+                distcalc.then(ClientCommands.literal("bookmarks")
                     .then(bm1Arg));
                 
                 dispatcher.register(distcalc);
@@ -258,14 +266,14 @@ public class CopyCoords implements ClientModInitializer {
             details = "unknown";
         }
 
-        client.gui.getChat().addMessage(Component.literal("[CopyCoords] Instant send failed: " + prefix + " (" + details + ")"));
+        sendSystemMessage(Component.literal("[CopyCoords] Instant send failed: " + prefix + " (" + details + ")"));
     }
 
     private int executeCopyCoords(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
 
         if (player == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
@@ -291,7 +299,7 @@ public class CopyCoords implements ClientModInitializer {
     private int executeCopyCoordsWithGoal(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
@@ -324,7 +332,7 @@ public class CopyCoords implements ClientModInitializer {
     private int executeConvertCoords(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
@@ -362,7 +370,7 @@ public class CopyCoords implements ClientModInitializer {
     private int executeMsgCoords(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
@@ -383,7 +391,7 @@ public class CopyCoords implements ClientModInitializer {
 
         config.showInstantChatSendUnboundHint = enabled;
         config.save();
-        Minecraft.getInstance().gui.getChat().addMessage(
+        sendSystemMessage(
                 Component.literal("[CopyCoords] Show instant-send unbound hint: " + enabled));
         return Command.SINGLE_SUCCESS;
     }
@@ -394,14 +402,14 @@ public class CopyCoords implements ClientModInitializer {
         }
 
         String keybindState = CopyCoordsBind.isInstantChatSendKeybindUnbound() ? "unbound" : "bound";
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("[CopyCoords] Status"));
-        Minecraft.getInstance().gui.getChat().addMessage(
+        sendSystemMessage(Component.literal("[CopyCoords] Status"));
+        sendSystemMessage(
                 Component.literal(" - instantChatEnabled: " + config.instantChatEnabled));
-        Minecraft.getInstance().gui.getChat().addMessage(
+        sendSystemMessage(
                 Component.literal(" - showInstantChatSendUnboundHint: " + config.showInstantChatSendUnboundHint));
-        Minecraft.getInstance().gui.getChat().addMessage(
+        sendSystemMessage(
                 Component.literal(" - pasteToChatInput: " + config.pasteToChatInput));
-        Minecraft.getInstance().gui.getChat().addMessage(
+        sendSystemMessage(
                 Component.literal(" - instantChatSendKey: " + keybindState));
         return Command.SINGLE_SUCCESS;
     }
@@ -409,26 +417,26 @@ public class CopyCoords implements ClientModInitializer {
     private LiteralArgumentBuilder<FabricClientCommandSource> buildBookmarkCommand(
             String rootCommand,
             SuggestionProvider<FabricClientCommandSource> bookmarkSuggestions) {
-        LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommandManager.literal(rootCommand);
+        LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommands.literal(rootCommand);
         bookmark.executes(context -> executeBookmarkList());
-        bookmark.then(ClientCommandManager.literal("list")
+        bookmark.then(ClientCommands.literal("list")
                 .executes(context -> executeBookmarkList()));
-        bookmark.then(ClientCommandManager.literal("add")
-                .then(ClientCommandManager.argument("name", StringArgumentType.greedyString())
+        bookmark.then(ClientCommands.literal("add")
+                .then(ClientCommands.argument("name", StringArgumentType.greedyString())
                         .executes(context -> executeBookmarkAdd(StringArgumentType.getString(context, "name")))));
-        bookmark.then(ClientCommandManager.literal("copy")
-                .then(ClientCommandManager.argument("name", StringArgumentType.string())
+        bookmark.then(ClientCommands.literal("copy")
+                .then(ClientCommands.argument("name", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkCopy(StringArgumentType.getString(context, "name")))));
-        bookmark.then(ClientCommandManager.literal("remove")
-                .then(ClientCommandManager.argument("name", StringArgumentType.string())
+        bookmark.then(ClientCommands.literal("remove")
+                .then(ClientCommands.argument("name", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkRemove(StringArgumentType.getString(context, "name")))));
-        bookmark.then(ClientCommandManager.literal("export")
-                .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
+        bookmark.then(ClientCommands.literal("export")
+                .then(ClientCommands.argument("file", StringArgumentType.greedyString())
                         .executes(ctx -> executeBookmarkExport(StringArgumentType.getString(ctx, "file")))));
-        bookmark.then(ClientCommandManager.literal("import")
-                .then(ClientCommandManager.argument("file", StringArgumentType.greedyString())
+        bookmark.then(ClientCommands.literal("import")
+                .then(ClientCommands.argument("file", StringArgumentType.greedyString())
                         .executes(ctx -> executeBookmarkImport(StringArgumentType.getString(ctx, "file")))));
         return bookmark;
     }
@@ -436,7 +444,7 @@ public class CopyCoords implements ClientModInitializer {
     private int executeMsgCoordsWithGoal(CommandContext<FabricClientCommandSource> context) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
@@ -480,12 +488,12 @@ public class CopyCoords implements ClientModInitializer {
 
     private double[] convertCurrentCoordsToGoal(Player player, String goal, double x, double y, double z) {
         if (!goal.equals("overworld") && !goal.equals("nether")) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.unknown_goal", goal));
+            sendSystemMessage(Component.translatable("message.copycoords.command.unknown_goal", goal));
             return null;
         }
 
         if (!PlayerLevelCompat.isInDimension(player, Level.OVERWORLD) && !PlayerLevelCompat.isInDimension(player, Level.NETHER)) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.unsupported_dimension"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.unsupported_dimension"));
             return null;
         }
 
@@ -507,7 +515,7 @@ public class CopyCoords implements ClientModInitializer {
     private int sendCoordsMessage(String target, String coordString) {
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         if (connection == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.msg_failed", target, "no server connection"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.msg_failed", target, "no server connection"));
             return 0;
         }
 
@@ -520,7 +528,7 @@ public class CopyCoords implements ClientModInitializer {
             if (errorMsg == null || errorMsg.isEmpty()) {
                 errorMsg = e.getClass().getSimpleName();
             }
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.msg_failed", target, errorMsg));
+            sendSystemMessage(Component.translatable("message.copycoords.command.msg_failed", target, errorMsg));
             return 0;
         }
     }
@@ -649,7 +657,7 @@ public class CopyCoords implements ClientModInitializer {
             return true;
         }
         Minecraft mc = Minecraft.getInstance();
-        mc.gui.getChat().addMessage(Component.literal("Data store is not available yet."));
+        sendSystemMessage(Component.literal("Data store is not available yet."));
         return false;
     }
 
@@ -667,7 +675,7 @@ public class CopyCoords implements ClientModInitializer {
                 openChatWithText(text);
             } else {
                 ClipboardUtils.copyToClipboard(text);
-                Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.copied"));
+                sendSystemMessage(Component.translatable("message.copycoords.command.copied"));
             }
             addHistoryEntry(x, y, z, dimensionId);
         } catch (Exception e) {
@@ -675,7 +683,7 @@ public class CopyCoords implements ClientModInitializer {
             if (errorMsg == null || errorMsg.isEmpty()) {
                 errorMsg = e.getClass().getSimpleName();
             }
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
+            sendSystemMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
         }
     }
 
@@ -685,11 +693,11 @@ public class CopyCoords implements ClientModInitializer {
         }
         List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
         if (history.isEmpty()) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("History is empty."));
+            sendSystemMessage(Component.literal("History is empty."));
             return 0;
         }
 
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Recent coordinates (click entry to copy, use [menu] for actions):"));
+        sendSystemMessage(Component.literal("Recent coordinates (click entry to copy, use [menu] for actions):"));
 
         for (int i = 0; i < history.size(); i++) {
             CopyCoordsDataStore.HistoryEntry entry = history.get(i);
@@ -709,7 +717,7 @@ public class CopyCoords implements ClientModInitializer {
             line.append(Component.literal(" "));
             line.append(buildActionChip("menu", buildClickEvent("/coordshistory menu " + clickIndex), "Open quick actions for this entry"));
             appendMapLinks(line, entry.x, entry.y, entry.z, entry.dimensionId);
-            Minecraft.getInstance().gui.getChat().addMessage(line);
+            sendSystemMessage(line);
         }
 
         return Command.SINGLE_SUCCESS;
@@ -721,7 +729,7 @@ public class CopyCoords implements ClientModInitializer {
         }
         List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
         if (index < 1 || index > history.size()) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
+            sendSystemMessage(Component.literal("Invalid history index: " + index));
             return 0;
         }
 
@@ -729,7 +737,7 @@ public class CopyCoords implements ClientModInitializer {
         String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
         try {
             ClipboardUtils.copyToClipboard(coordString);
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Copied history entry " + index + " to clipboard."));
+            sendSystemMessage(Component.literal("Copied history entry " + index + " to clipboard."));
             addHistoryEntry(entry.x, entry.y, entry.z, entry.dimensionId);
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
@@ -737,7 +745,7 @@ public class CopyCoords implements ClientModInitializer {
             if (errorMsg == null || errorMsg.isEmpty()) {
                 errorMsg = e.getClass().getSimpleName();
             }
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
+            sendSystemMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
             return 0;
         }
     }
@@ -747,11 +755,11 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
         if (!dataStore.removeHistoryEntry(index - 1)) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
+            sendSystemMessage(Component.literal("Invalid history index: " + index));
             return 0;
         }
 
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Removed history entry " + index + "."));
+        sendSystemMessage(Component.literal("Removed history entry " + index + "."));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -761,7 +769,7 @@ public class CopyCoords implements ClientModInitializer {
         }
         List<CopyCoordsDataStore.HistoryEntry> history = dataStore.getHistory();
         if (index < 1 || index > history.size()) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Invalid history index: " + index));
+            sendSystemMessage(Component.literal("Invalid history index: " + index));
             return 0;
         }
 
@@ -770,7 +778,7 @@ public class CopyCoords implements ClientModInitializer {
 
         net.minecraft.network.chat.MutableComponent title = Component.literal("History entry " + index + ": " + coordString);
         appendMapLinks(title, entry.x, entry.y, entry.z, entry.dimensionId);
-        Minecraft.getInstance().gui.getChat().addMessage(title);
+        sendSystemMessage(title);
 
         net.minecraft.network.chat.MutableComponent actions = Component.literal("Actions: ");
         actions.append(buildActionChip("copy", buildClickEvent("/coordshistory copy " + index), "Copy this entry to clipboard"));
@@ -780,7 +788,7 @@ public class CopyCoords implements ClientModInitializer {
         actions.append(buildActionChip("remove", buildClickEvent("/coordshistory remove " + index), "Remove this entry from history"));
         actions.append(Component.literal(" "));
         actions.append(buildActionChip("clear_all", buildClickEvent("/coordshistory clear"), "Clear all history entries"));
-        Minecraft.getInstance().gui.getChat().addMessage(actions);
+        sendSystemMessage(actions);
 
         return Command.SINGLE_SUCCESS;
     }
@@ -790,7 +798,7 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
         dataStore.clearHistory();
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("History cleared."));
+        sendSystemMessage(Component.literal("History cleared."));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -800,13 +808,13 @@ public class CopyCoords implements ClientModInitializer {
         }
         Player player = Minecraft.getInstance().player;
         if (player == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.no_player"));
+            sendSystemMessage(Component.translatable("message.copycoords.command.no_player"));
             return 0;
         }
 
         String trimmed = name.trim();
         if (trimmed.isEmpty()) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark name cannot be empty."));
+            sendSystemMessage(Component.literal("Bookmark name cannot be empty."));
             return 0;
         }
 
@@ -816,11 +824,11 @@ public class CopyCoords implements ClientModInitializer {
         String dimensionId = getDimensionId(player);
 
         if (!dataStore.addBookmark(trimmed, x, y, z, dimensionId)) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark already exists: " + trimmed));
+            sendSystemMessage(Component.literal("Bookmark already exists: " + trimmed));
             return 0;
         }
 
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark added: " + trimmed));
+        sendSystemMessage(Component.literal("Bookmark added: " + trimmed));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -830,11 +838,11 @@ public class CopyCoords implements ClientModInitializer {
         }
         List<CopyCoordsDataStore.BookmarkEntry> bookmarks = dataStore.getBookmarks();
         if (bookmarks.isEmpty()) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("No bookmarks yet."));
+            sendSystemMessage(Component.literal("No bookmarks yet."));
             return 0;
         }
 
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmarks (click to copy):"));
+        sendSystemMessage(Component.literal("Bookmarks (click to copy):"));
         for (CopyCoordsDataStore.BookmarkEntry entry : bookmarks) {
             String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
             String command = "/coordsbookmark copy " + quoteForBrigadier(entry.name);
@@ -847,7 +855,7 @@ public class CopyCoords implements ClientModInitializer {
                                 (int) Math.floor(entry.y),
                                 (int) Math.floor(entry.z),
                                 entry.dimensionId);
-            Minecraft.getInstance().gui.getChat().addMessage(line);
+            sendSystemMessage(line);
         }
 
         return Command.SINGLE_SUCCESS;
@@ -859,14 +867,14 @@ public class CopyCoords implements ClientModInitializer {
         }
         CopyCoordsDataStore.BookmarkEntry entry = dataStore.getBookmark(name);
         if (entry == null) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark not found: " + name));
+            sendSystemMessage(Component.literal("Bookmark not found: " + name));
             return 0;
         }
 
         String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
         try {
             ClipboardUtils.copyToClipboard(coordString);
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Copied bookmark '" + entry.name + "' to clipboard."));
+            sendSystemMessage(Component.literal("Copied bookmark '" + entry.name + "' to clipboard."));
             addHistoryEntry(
                     (int) Math.floor(entry.x),
                     (int) Math.floor(entry.y),
@@ -878,7 +886,7 @@ public class CopyCoords implements ClientModInitializer {
             if (errorMsg == null || errorMsg.isEmpty()) {
                 errorMsg = e.getClass().getSimpleName();
             }
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
+            sendSystemMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
             return 0;
         }
     }
@@ -888,11 +896,11 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
         if (dataStore.removeBookmark(name)) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark removed: " + name));
+            sendSystemMessage(Component.literal("Bookmark removed: " + name));
             return Command.SINGLE_SUCCESS;
         }
 
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Bookmark not found: " + name));
+        sendSystemMessage(Component.literal("Bookmark not found: " + name));
         return 0;
     }
 
@@ -903,12 +911,12 @@ public class CopyCoords implements ClientModInitializer {
         try {
             Path path = resolveBookmarkTransferPath(file, false);
             if (dataStore.exportBookmarks(path)) {
-                Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.exported", path.toString()));
+                sendSystemMessage(Component.translatable("message.copycoords.bookmark.exported", path.toString()));
                 return Command.SINGLE_SUCCESS;
             }
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.export_failed", "see log for details"));
+            sendSystemMessage(Component.translatable("message.copycoords.bookmark.export_failed", "see log for details"));
         } catch (Exception e) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.export_failed", e.getMessage()));
+            sendSystemMessage(Component.translatable("message.copycoords.bookmark.export_failed", e.getMessage()));
         }
         return 0;
     }
@@ -920,12 +928,12 @@ public class CopyCoords implements ClientModInitializer {
         try {
             Path path = resolveBookmarkTransferPath(file, true);
             if (dataStore.importBookmarks(path)) {
-                Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.imported", path.toString()));
+                sendSystemMessage(Component.translatable("message.copycoords.bookmark.imported", path.toString()));
                 return Command.SINGLE_SUCCESS;
             }
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.import_failed", "see log for details"));
+            sendSystemMessage(Component.translatable("message.copycoords.bookmark.import_failed", "see log for details"));
         } catch (Exception e) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("message.copycoords.bookmark.import_failed", e.getMessage()));
+            sendSystemMessage(Component.translatable("message.copycoords.bookmark.import_failed", e.getMessage()));
         }
         return 0;
     }
@@ -992,7 +1000,7 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private void postCoordinateMessage(String prefix, String coordString, int x, int y, int z, String dimensionId) {
-        Minecraft.getInstance().gui.getChat().addMessage(buildCoordinateMessage(prefix, coordString, x, y, z, dimensionId));
+        sendSystemMessage(buildCoordinateMessage(prefix, coordString, x, y, z, dimensionId));
     }
 
     static net.minecraft.network.chat.MutableComponent buildCoordinateMessage(String prefix, String coordString, int x, int y, int z, String dimensionId) {
@@ -1087,14 +1095,14 @@ public class CopyCoords implements ClientModInitializer {
                     + formatCoordinateValue(x2) + ", "
                     + formatCoordinateValue(y2) + ", "
                     + formatCoordinateValue(z2) + "]";
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));
+            sendSystemMessage(Component.literal(message));
             
             String resultMessage = "§2" + DistanceCalculator.formatResult(result, true);
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal(resultMessage));
+            sendSystemMessage(Component.literal(resultMessage));
             
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("§cError calculating distance: " + e.getMessage()));
+            sendSystemMessage(Component.literal("§cError calculating distance: " + e.getMessage()));
             return 0;
         }
     }
@@ -1111,11 +1119,11 @@ public class CopyCoords implements ClientModInitializer {
             CopyCoordsDataStore.BookmarkEntry bm2 = dataStore.getBookmark(bm2Name);
             
             if (bm1 == null) {
-                Minecraft.getInstance().gui.getChat().addMessage(Component.literal("§cBookmark not found: " + bm1Name));
+                sendSystemMessage(Component.literal("§cBookmark not found: " + bm1Name));
                 return 0;
             }
             if (bm2 == null) {
-                Minecraft.getInstance().gui.getChat().addMessage(Component.literal("§cBookmark not found: " + bm2Name));
+                sendSystemMessage(Component.literal("§cBookmark not found: " + bm2Name));
                 return 0;
             }
             
@@ -1128,7 +1136,7 @@ public class CopyCoords implements ClientModInitializer {
                     (int) Math.floor(bm2.z));
 
             String message = "§6Distance Calculator§r: From '" + bm1Name + "' to '" + bm2Name + "'";
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal(message));
+            sendSystemMessage(Component.literal(message));
             
             String coordMessage = "  From ["
                     + formatCoordinateValue(bm1.x) + ", "
@@ -1137,14 +1145,14 @@ public class CopyCoords implements ClientModInitializer {
                     + formatCoordinateValue(bm2.x) + ", "
                     + formatCoordinateValue(bm2.y) + ", "
                     + formatCoordinateValue(bm2.z) + "]";
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal(coordMessage));
+            sendSystemMessage(Component.literal(coordMessage));
             
             String resultMessage = "§2" + DistanceCalculator.formatResult(result, true);
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal(resultMessage));
+            sendSystemMessage(Component.literal(resultMessage));
             
             return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
-            Minecraft.getInstance().gui.getChat().addMessage(Component.literal("§cError calculating distance: " + e.getMessage()));
+            sendSystemMessage(Component.literal("§cError calculating distance: " + e.getMessage()));
             return 0;
         }
     }

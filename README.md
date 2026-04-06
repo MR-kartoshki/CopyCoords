@@ -4,7 +4,7 @@ CopyCoords is a client-side Fabric mod that makes coordinates faster to copy, co
 
 ## Supported Minecraft Versions
 
-- `1.19` - `1.21.11`
+- `1.19` - `26.1.1`
 
 Each release jar is built for a specific Minecraft version.
 
@@ -57,6 +57,7 @@ Each release jar is built for a specific Minecraft version.
 - `/coordsbookmark export <file>`
 - `/coordsbookmark import <file>`
 - `/coordbookmark ...` alias for bookmark commands
+- and a couple more that I forgot to list here, see the in-game command suggestions for the full list.
 
 ## Configuration
 

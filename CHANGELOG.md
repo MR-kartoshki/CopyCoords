@@ -2,6 +2,13 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.14.0] - 2026-04-06
+
+### Added
+
+- Support for Minecraft `26.1` and `26.1.1`.
+
+
 ## [1.13.0] - 2026-03-21
 
 ### Added
