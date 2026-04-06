@@ -34,11 +34,27 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
       - name: Make Gradle executable
         run: chmod +x ./gradlew
       - name: Build all versions
-        run: ./gradlew buildAllVersions --no-daemon
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          ./gradlew --version
+          ./gradlew buildAllVersions --no-daemon --stacktrace --info --console=plain 2>&1 | tee build/gradle-build.log || {
+            echo "::error::Gradle build failed - see build/gradle-build.log"
+            cat build/gradle-build.log
+            exit 1
+          }
+      - name: Upload Gradle build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log-build-and-publish
+          path: build/gradle-build.log
+          if-no-files-found: ignore
       - name: Extract current changelog
         run: ./gradlew writeCurrentChangelog --no-daemon
       - name: Discover built versions
@@ -206,11 +222,27 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
       - name: Make Gradle executable
         run: chmod +x ./gradlew
       - name: Build all versions
-        run: ./gradlew buildAllVersions --no-daemon
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          ./gradlew --version
+          ./gradlew buildAllVersions --no-daemon --stacktrace --info --console=plain 2>&1 | tee build/gradle-build.log || {
+            echo "::error::Gradle build failed - see build/gradle-build.log"
+            cat build/gradle-build.log
+            exit 1
+          }
+      - name: Upload Gradle build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log-github-release
+          path: build/gradle-build.log
+          if-no-files-found: ignore
       - name: Extract current changelog
         run: ./gradlew writeCurrentChangelog --no-daemon
       - name: Gather release jars
