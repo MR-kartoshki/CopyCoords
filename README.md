@@ -6,7 +6,7 @@
 
 [![Modrinth](https://img.shields.io/modrinth/dt/copycoordsmod?color=00AF5C&label=Downloads&logo=modrinth)](https://modrinth.com/mod/copycoordsmod)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
-[![GitHub Release](https://img.shields.io/github/v/release/MR-kartoshki/copycoords)](https://github.com/MR-kartoshki/copycoords/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/MR-kartoshki/copycoords)](https://github.com/MR-kartoshki/copycoords/releases/latest)
 
 </div>
 
