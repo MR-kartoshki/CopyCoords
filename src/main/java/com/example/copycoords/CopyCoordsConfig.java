@@ -15,6 +15,9 @@ public class CopyCoordsConfig {
     public static final int MIN_DECIMAL_PLACES = 0;
     public static final int MAX_DECIMAL_PLACES = 10;
     public static final int DEFAULT_DECIMAL_PLACES = 2;
+    public static final int MIN_CHAT_DETECTIONS_PER_MESSAGE = 1;
+    public static final int MAX_CHAT_DETECTIONS_PER_MESSAGE = 5;
+    public static final int DEFAULT_CHAT_DETECTIONS_PER_MESSAGE = 2;
 
     public boolean copyToClipboard = true;
     public boolean copyConvertedToClipboard = true;
@@ -23,6 +26,8 @@ public class CopyCoordsConfig {
     public boolean instantChatEnabled = false;
     public boolean showInstantChatSendUnboundHint = true;
     public boolean pasteToChatInput = false;
+    public boolean chatCoordinateDetectionEnabled = true;
+    public int chatCoordinateDetectionMaxPerMessage = DEFAULT_CHAT_DETECTIONS_PER_MESSAGE;
     public String coordinateFormat = "space";
     public int decimalPlaces = DEFAULT_DECIMAL_PLACES;
     public String coordinateTemplate = "";
@@ -78,6 +83,15 @@ public class CopyCoordsConfig {
                     } else {
                         config.decimalPlaces = clampDecimalPlaces(config.decimalPlaces);
                     }
+                    if (raw == null || !raw.has("chatCoordinateDetectionEnabled")) {
+                        config.chatCoordinateDetectionEnabled = true;
+                    }
+                    if (raw == null || !raw.has("chatCoordinateDetectionMaxPerMessage")) {
+                        config.chatCoordinateDetectionMaxPerMessage = DEFAULT_CHAT_DETECTIONS_PER_MESSAGE;
+                    } else {
+                        config.chatCoordinateDetectionMaxPerMessage = clampChatCoordinateDetectionMaxPerMessage(
+                                config.chatCoordinateDetectionMaxPerMessage);
+                    }
                     if (!configPath.equals(readPath)) {
                         config.save();
                     }
@@ -95,6 +109,11 @@ public class CopyCoordsConfig {
 
     public static int clampDecimalPlaces(int decimalPlaces) {
         return Math.max(MIN_DECIMAL_PLACES, Math.min(MAX_DECIMAL_PLACES, decimalPlaces));
+    }
+
+    public static int clampChatCoordinateDetectionMaxPerMessage(int maxPerMessage) {
+        return Math.max(MIN_CHAT_DETECTIONS_PER_MESSAGE,
+                Math.min(MAX_CHAT_DETECTIONS_PER_MESSAGE, maxPerMessage));
     }
 
     public void save() {

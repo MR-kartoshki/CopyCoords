@@ -19,8 +19,10 @@
 - Send coordinates to a player with `/msgcoords`
 - Distance calculator between two positions or saved bookmarks
 - Clickable coordinates in chat
+- Auto-detect coordinates from chat with clickable follow-up actions
 - Full coordinate history — copy, reinsert, or remove past entries
 - Bookmarks with import/export support
+- Export bookmarks to Xaero's Minimap / World Map waypoint files
 - Map links for Dynmap, BlueMap, or any custom web map
 - Configurable format, decimal precision, and custom templates
 
@@ -41,7 +43,7 @@
 | Cloth Config | [Modrinth](https://modrinth.com/mod/cloth-config) |
 | Mod Menu | [Modrinth](https://modrinth.com/mod/modmenu) |
 
-Supports Minecraft `1.19` through `26.1.1`. Each jar targets a specific MC version.
+Supports Minecraft `1.19` through `26.1.2`. Each jar targets a specific MC version.
 
 ---
 
@@ -68,6 +70,8 @@ Supports Minecraft `1.19` through `26.1.1`. Each jar targets a specific MC versi
 | `/coordshistory` | View coordinate history |
 | `/coordsbookmark add/list/copy/remove` | Manage bookmarks |
 | `/coordsbookmark export/import [file]` | Backup or restore bookmarks |
+| `/coordsbookmark xaero add [bookmark]` | Export a bookmark to Xaero waypoints for the current world/server |
+| `/coordsbookmark xaero add [bookmark] target [path]` | Export a bookmark to an explicit Xaero folder or waypoint file |
 
 See in-game command suggestions for the full list.
 
@@ -84,6 +88,8 @@ Open **Mod Menu** and select CopyCoords, or edit the config files directly:
 **Template placeholders:** `{x}` `{y}` `{z}` `{dimension}` `{dimName}`
 
 **Map link placeholders:** `{x}` `{y}` `{z}` `{world}` `{worldEncoded}` `{dimension}` `{dimensionEncoded}`
+
+**Chat detection:** when enabled, CopyCoords scans incoming chat for common coordinate formats and posts a compact action line for copy, insert, bookmark, and supported conversions.
 
 > **Instant Chat Send** is unbound by default. Set it in Controls before use.
 > If a send fails, CopyCoords prints the reason in chat.

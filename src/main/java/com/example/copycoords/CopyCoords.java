@@ -3,14 +3,13 @@ package com.example.copycoords;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.loader.api.FabricLoader;
@@ -25,6 +24,8 @@ import net.minecraft.world.level.Level;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -37,13 +38,19 @@ public class CopyCoords implements ClientModInitializer {
     private static final String OVERWORLD_ID = Level.OVERWORLD.toString();
     private static final String NETHER_ID = Level.NETHER.toString();
     private static final String END_ID = Level.END.toString();
+    private static final String DETECTED_COORDINATE_PREFIX = "Detected coordinates: ";
+    private static final String DETECTED_CONVERTED_PREFIX = "Converted detected coordinates: ";
+    private static final String DETECTED_UNKNOWN_DIMENSION_TOKEN = "unknown";
+    private static final int RECENT_LOCAL_MESSAGE_LIMIT = 40;
+    private static final Deque<String> RECENT_LOCAL_MESSAGES = new ArrayDeque<>();
 
     static void sendSystemMessage(Component message) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || message == null) {
             return;
         }
-        mc.player.sendSystemMessage(message);
+        rememberLocalMessage(message.getString());
+        PlayerMessageCompat.send(mc.player, message);
     }
 
     @Override
@@ -52,12 +59,13 @@ public class CopyCoords implements ClientModInitializer {
         config = CopyCoordsConfig.load();
         dataStore = CopyCoordsDataStore.load();
         CopyCoordsBind.register();
+        ChatReceiveCompat.register(CopyCoords::handleIncomingChatText);
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            LiteralArgumentBuilder<FabricClientCommandSource> builder = ClientCommands.literal("copycoords");
+            LiteralArgumentBuilder<FabricClientCommandSource> builder = ClientCommandCompat.literal("copycoords");
             builder.executes(context -> executeCopyCoords(context));
 
-            LiteralArgumentBuilder<FabricClientCommandSource> conv = ClientCommands.literal("convertcoords");
+            LiteralArgumentBuilder<FabricClientCommandSource> conv = ClientCommandCompat.literal("convertcoords");
 
             SuggestionProvider<FabricClientCommandSource> dimSuggestions = (ctx, sb) -> {
                 sb.suggest("overworld");
@@ -87,12 +95,12 @@ public class CopyCoords implements ClientModInitializer {
                 SharedSuggestionProvider.suggest(pctx.getSource().getOnlinePlayerNames(), psb);
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> coordArg = 
-                ClientCommands.argument("coordinates", StringArgumentType.greedyString())
+                ClientCommandCompat.argument("coordinates", StringArgumentType.greedyString())
                     .suggests(coordSuggestions)
                     .executes(context -> executeConvertCoords(context));
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> goalArg = 
-                ClientCommands.argument("goal", StringArgumentType.word())
+                ClientCommandCompat.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
                     .then(coordArg)
                     .executes(context -> executeConvertCoords(context));
@@ -101,41 +109,31 @@ public class CopyCoords implements ClientModInitializer {
             dispatcher.register(conv);
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> copyGoalArg =
-                ClientCommands.argument("goal", StringArgumentType.word())
+                ClientCommandCompat.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
                     .executes(context -> executeCopyCoordsWithGoal(context));
             builder.then(copyGoalArg);
-                builder.then(ClientCommands.literal("status")
-                    .executes(context -> executeConfigStatus()));
-                builder.then(ClientCommands.literal("hintunbound")
-                    .then(ClientCommands.argument("enabled", BoolArgumentType.bool())
-                        .executes(context -> executeSetShowInstantChatSendUnboundHint(
-                            BoolArgumentType.getBool(context, "enabled")))));
-                builder.then(ClientCommands.literal("config")
-                    .then(ClientCommands.literal("showInstantChatSendUnboundHint")
-                        .then(ClientCommands.argument("enabled", BoolArgumentType.bool())
-                            .executes(context -> executeSetShowInstantChatSendUnboundHint(
-                                BoolArgumentType.getBool(context, "enabled"))))));
+            builder.then(buildDetectedCommand(dimSuggestions));
             dispatcher.register(builder);
 
-            LiteralArgumentBuilder<FabricClientCommandSource> cc = ClientCommands.literal("cc");
+            LiteralArgumentBuilder<FabricClientCommandSource> cc = ClientCommandCompat.literal("cc");
             cc.executes(context -> executeCopyCoords(context));
             cc.then(copyGoalArg);
             dispatcher.register(cc);
 
-            LiteralArgumentBuilder<FabricClientCommandSource> copycoordinates = ClientCommands.literal("copycoordinates");
+            LiteralArgumentBuilder<FabricClientCommandSource> copycoordinates = ClientCommandCompat.literal("copycoordinates");
             copycoordinates.executes(context -> executeCopyCoords(context));
             copycoordinates.then(copyGoalArg);
             dispatcher.register(copycoordinates);
 
-            LiteralArgumentBuilder<FabricClientCommandSource> msg = ClientCommands.literal("msgcoords");
+            LiteralArgumentBuilder<FabricClientCommandSource> msg = ClientCommandCompat.literal("msgcoords");
             RequiredArgumentBuilder<FabricClientCommandSource, String> playerArg =
-                ClientCommands.argument("player", StringArgumentType.word())
+                ClientCommandCompat.argument("player", StringArgumentType.word())
                     .suggests(playerSuggestions)
                     .executes(context -> executeMsgCoords(context));
 
             RequiredArgumentBuilder<FabricClientCommandSource, String> msgGoalArg =
-                ClientCommands.argument("goal", StringArgumentType.word())
+                ClientCommandCompat.argument("goal", StringArgumentType.word())
                     .suggests(dimSuggestions)
                     .executes(context -> executeMsgCoordsWithGoal(context));
 
@@ -143,47 +141,47 @@ public class CopyCoords implements ClientModInitializer {
             msg.then(playerArg);
             dispatcher.register(msg);
 
-                LiteralArgumentBuilder<FabricClientCommandSource> history = ClientCommands.literal("coordshistory");
+                LiteralArgumentBuilder<FabricClientCommandSource> history = ClientCommandCompat.literal("coordshistory");
                 history.executes(context -> executeHistoryList());
-                history.then(ClientCommands.literal("list")
+                history.then(ClientCommandCompat.literal("list")
                     .executes(context -> executeHistoryList()));
-                history.then(ClientCommands.literal("clear")
+                history.then(ClientCommandCompat.literal("clear")
                     .executes(context -> executeHistoryClear()));
-                history.then(ClientCommands.literal("copy")
-                    .then(ClientCommands.argument("index", IntegerArgumentType.integer(1))
+                history.then(ClientCommandCompat.literal("copy")
+                    .then(ClientCommandCompat.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryCopy(IntegerArgumentType.getInteger(context, "index")))));
-                history.then(ClientCommands.literal("remove")
-                    .then(ClientCommands.argument("index", IntegerArgumentType.integer(1))
+                history.then(ClientCommandCompat.literal("remove")
+                    .then(ClientCommandCompat.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryRemove(IntegerArgumentType.getInteger(context, "index")))));
-                history.then(ClientCommands.literal("menu")
-                    .then(ClientCommands.argument("index", IntegerArgumentType.integer(1))
+                history.then(ClientCommandCompat.literal("menu")
+                    .then(ClientCommandCompat.argument("index", IntegerArgumentType.integer(1))
                         .executes(context -> executeHistoryMenu(IntegerArgumentType.getInteger(context, "index")))));
                 dispatcher.register(history);
 
                 dispatcher.register(buildBookmarkCommand("coordsbookmark", bookmarkSuggestions));
                 dispatcher.register(buildBookmarkCommand("coordbookmark", bookmarkSuggestions));
 
-                LiteralArgumentBuilder<FabricClientCommandSource> distcalc = ClientCommands.literal("distcalc");
+                LiteralArgumentBuilder<FabricClientCommandSource> distcalc = ClientCommandCompat.literal("distcalc");
                 
                 RequiredArgumentBuilder<FabricClientCommandSource, Integer> x1Arg =
-                    ClientCommands.argument("x1", IntegerArgumentType.integer())
-                        .then(ClientCommands.argument("y1", IntegerArgumentType.integer())
-                            .then(ClientCommands.argument("z1", IntegerArgumentType.integer())
-                                .then(ClientCommands.argument("x2", IntegerArgumentType.integer())
-                                    .then(ClientCommands.argument("y2", IntegerArgumentType.integer())
-                                        .then(ClientCommands.argument("z2", IntegerArgumentType.integer())
+                    ClientCommandCompat.argument("x1", IntegerArgumentType.integer())
+                        .then(ClientCommandCompat.argument("y1", IntegerArgumentType.integer())
+                            .then(ClientCommandCompat.argument("z1", IntegerArgumentType.integer())
+                                .then(ClientCommandCompat.argument("x2", IntegerArgumentType.integer())
+                                    .then(ClientCommandCompat.argument("y2", IntegerArgumentType.integer())
+                                        .then(ClientCommandCompat.argument("z2", IntegerArgumentType.integer())
                                             .executes(context -> executeDistanceCalc(context)))))));
                 
                 distcalc.then(x1Arg);
 
                 RequiredArgumentBuilder<FabricClientCommandSource, String> bm1Arg =
-                    ClientCommands.argument("bookmark1", StringArgumentType.string())
+                    ClientCommandCompat.argument("bookmark1", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
-                        .then(ClientCommands.argument("bookmark2", StringArgumentType.string())
+                        .then(ClientCommandCompat.argument("bookmark2", StringArgumentType.string())
                             .suggests(bookmarkSuggestions)
                             .executes(context -> executeDistanceCalcBookmarks(context)));
 
-                distcalc.then(ClientCommands.literal("bookmarks")
+                distcalc.then(ClientCommandCompat.literal("bookmarks")
                     .then(bm1Arg));
                 
                 dispatcher.register(distcalc);
@@ -384,60 +382,86 @@ public class CopyCoords implements ClientModInitializer {
         return sendCoordsMessage(target, coordString);
     }
 
-    private int executeSetShowInstantChatSendUnboundHint(boolean enabled) {
-        if (config == null) {
-            config = CopyCoordsConfig.load();
-        }
+    private LiteralArgumentBuilder<FabricClientCommandSource> buildDetectedCommand(
+            SuggestionProvider<FabricClientCommandSource> dimSuggestions) {
+        LiteralArgumentBuilder<FabricClientCommandSource> detected = ClientCommandCompat.literal("detected");
 
-        config.showInstantChatSendUnboundHint = enabled;
-        config.save();
-        sendSystemMessage(
-                Component.literal("[CopyCoords] Show instant-send unbound hint: " + enabled));
-        return Command.SINGLE_SUCCESS;
-    }
+        detected.then(ClientCommandCompat.literal("copy")
+                .then(ClientCommandCompat.argument("x", DoubleArgumentType.doubleArg())
+                        .then(ClientCommandCompat.argument("y", DoubleArgumentType.doubleArg())
+                                .then(ClientCommandCompat.argument("z", DoubleArgumentType.doubleArg())
+                                        .then(ClientCommandCompat.argument("dimension", StringArgumentType.word())
+                                                .executes(context -> executeDetectedCopy(
+                                                        DoubleArgumentType.getDouble(context, "x"),
+                                                        DoubleArgumentType.getDouble(context, "y"),
+                                                        DoubleArgumentType.getDouble(context, "z"),
+                                                        StringArgumentType.getString(context, "dimension"))))))));
 
-    private int executeConfigStatus() {
-        if (config == null) {
-            config = CopyCoordsConfig.load();
-        }
+        detected.then(ClientCommandCompat.literal("bookmark")
+                .then(ClientCommandCompat.argument("x", DoubleArgumentType.doubleArg())
+                        .then(ClientCommandCompat.argument("y", DoubleArgumentType.doubleArg())
+                                .then(ClientCommandCompat.argument("z", DoubleArgumentType.doubleArg())
+                                        .then(ClientCommandCompat.argument("dimension", StringArgumentType.word())
+                                                .then(ClientCommandCompat.argument("name", StringArgumentType.greedyString())
+                                                        .executes(context -> executeDetectedBookmark(
+                                                                DoubleArgumentType.getDouble(context, "x"),
+                                                                DoubleArgumentType.getDouble(context, "y"),
+                                                                DoubleArgumentType.getDouble(context, "z"),
+                                                                StringArgumentType.getString(context, "dimension"),
+                                                                StringArgumentType.getString(context, "name")))))))));
 
-        String keybindState = CopyCoordsBind.isInstantChatSendKeybindUnbound() ? "unbound" : "bound";
-        sendSystemMessage(Component.literal("[CopyCoords] Status"));
-        sendSystemMessage(
-                Component.literal(" - instantChatEnabled: " + config.instantChatEnabled));
-        sendSystemMessage(
-                Component.literal(" - showInstantChatSendUnboundHint: " + config.showInstantChatSendUnboundHint));
-        sendSystemMessage(
-                Component.literal(" - pasteToChatInput: " + config.pasteToChatInput));
-        sendSystemMessage(
-                Component.literal(" - instantChatSendKey: " + keybindState));
-        return Command.SINGLE_SUCCESS;
+        detected.then(ClientCommandCompat.literal("convert")
+                .then(ClientCommandCompat.argument("source", StringArgumentType.word())
+                        .suggests(dimSuggestions)
+                        .then(ClientCommandCompat.argument("goal", StringArgumentType.word())
+                                .suggests(dimSuggestions)
+                                .then(ClientCommandCompat.argument("x", DoubleArgumentType.doubleArg())
+                                        .then(ClientCommandCompat.argument("y", DoubleArgumentType.doubleArg())
+                                                .then(ClientCommandCompat.argument("z", DoubleArgumentType.doubleArg())
+                                                        .executes(context -> executeDetectedConvert(
+                                                                StringArgumentType.getString(context, "source"),
+                                                                StringArgumentType.getString(context, "goal"),
+                                                                DoubleArgumentType.getDouble(context, "x"),
+                                                                DoubleArgumentType.getDouble(context, "y"),
+                                                                DoubleArgumentType.getDouble(context, "z")))))))));
+
+        return detected;
     }
 
     private LiteralArgumentBuilder<FabricClientCommandSource> buildBookmarkCommand(
             String rootCommand,
             SuggestionProvider<FabricClientCommandSource> bookmarkSuggestions) {
-        LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommands.literal(rootCommand);
+        LiteralArgumentBuilder<FabricClientCommandSource> bookmark = ClientCommandCompat.literal(rootCommand);
         bookmark.executes(context -> executeBookmarkList());
-        bookmark.then(ClientCommands.literal("list")
+        bookmark.then(ClientCommandCompat.literal("list")
                 .executes(context -> executeBookmarkList()));
-        bookmark.then(ClientCommands.literal("add")
-                .then(ClientCommands.argument("name", StringArgumentType.greedyString())
+        bookmark.then(ClientCommandCompat.literal("add")
+                .then(ClientCommandCompat.argument("name", StringArgumentType.greedyString())
                         .executes(context -> executeBookmarkAdd(StringArgumentType.getString(context, "name")))));
-        bookmark.then(ClientCommands.literal("copy")
-                .then(ClientCommands.argument("name", StringArgumentType.string())
+        bookmark.then(ClientCommandCompat.literal("copy")
+                .then(ClientCommandCompat.argument("name", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkCopy(StringArgumentType.getString(context, "name")))));
-        bookmark.then(ClientCommands.literal("remove")
-                .then(ClientCommands.argument("name", StringArgumentType.string())
+        bookmark.then(ClientCommandCompat.literal("remove")
+                .then(ClientCommandCompat.argument("name", StringArgumentType.string())
                         .suggests(bookmarkSuggestions)
                         .executes(context -> executeBookmarkRemove(StringArgumentType.getString(context, "name")))));
-        bookmark.then(ClientCommands.literal("export")
-                .then(ClientCommands.argument("file", StringArgumentType.greedyString())
+        bookmark.then(ClientCommandCompat.literal("export")
+                .then(ClientCommandCompat.argument("file", StringArgumentType.greedyString())
                         .executes(ctx -> executeBookmarkExport(StringArgumentType.getString(ctx, "file")))));
-        bookmark.then(ClientCommands.literal("import")
-                .then(ClientCommands.argument("file", StringArgumentType.greedyString())
+        bookmark.then(ClientCommandCompat.literal("import")
+                .then(ClientCommandCompat.argument("file", StringArgumentType.greedyString())
                         .executes(ctx -> executeBookmarkImport(StringArgumentType.getString(ctx, "file")))));
+        bookmark.then(ClientCommandCompat.literal("xaero")
+                .then(ClientCommandCompat.literal("add")
+                        .then(ClientCommandCompat.argument("name", StringArgumentType.string())
+                                .suggests(bookmarkSuggestions)
+                                .executes(ctx -> executeBookmarkXaeroAdd(StringArgumentType.getString(ctx, "name")))
+                                .then(ClientCommandCompat.literal("target")
+                                        .then(ClientCommandCompat.argument("path", StringArgumentType.greedyString())
+                                                .executes(ctx -> executeBookmarkXaeroAddToTarget(
+                                                        StringArgumentType.getString(ctx, "name"),
+                                                        StringArgumentType.getString(ctx, "path"))))))));
         return bookmark;
     }
 
@@ -670,6 +694,10 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private void copyToClipboardWithFeedback(String text, int x, int y, int z, String dimensionId) {
+        copyFormattedCoordinatesWithFeedback(text, x, y, z, dimensionId);
+    }
+
+    private static int copyFormattedCoordinatesWithFeedback(String text, int x, int y, int z, String dimensionId) {
         try {
             if (config != null && config.pasteToChatInput) {
                 openChatWithText(text);
@@ -678,12 +706,14 @@ public class CopyCoords implements ClientModInitializer {
                 sendSystemMessage(Component.translatable("message.copycoords.command.copied"));
             }
             addHistoryEntry(x, y, z, dimensionId);
+            return Command.SINGLE_SUCCESS;
         } catch (Exception e) {
             String errorMsg = e.getMessage();
             if (errorMsg == null || errorMsg.isEmpty()) {
                 errorMsg = e.getClass().getSimpleName();
             }
             sendSystemMessage(Component.translatable("message.copycoords.command.copy_failed", errorMsg));
+            return 0;
         }
     }
 
@@ -846,15 +876,20 @@ public class CopyCoords implements ClientModInitializer {
         for (CopyCoordsDataStore.BookmarkEntry entry : bookmarks) {
             String coordString = formatCoordinates(entry.x, entry.y, entry.z, entry.dimensionId);
             String command = "/coordsbookmark copy " + quoteForBrigadier(entry.name);
-                        ClickEvent clickEvent = buildClickEvent(command);
-                        HoverEvent hoverEvent = buildHoverEvent(Component.literal("Copy to clipboard"));
-                        net.minecraft.network.chat.MutableComponent line = Component.literal(entry.name + " - " + coordString)
-                            .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
-                        appendMapLinks(line,
-                                (int) Math.floor(entry.x),
-                                (int) Math.floor(entry.y),
-                                (int) Math.floor(entry.z),
-                                entry.dimensionId);
+            ClickEvent clickEvent = buildClickEvent(command);
+            HoverEvent hoverEvent = buildHoverEvent(Component.literal("Copy to clipboard"));
+            net.minecraft.network.chat.MutableComponent line = Component.literal(entry.name + " - " + coordString)
+                    .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
+            appendMapLinks(line,
+                    (int) Math.floor(entry.x),
+                    (int) Math.floor(entry.y),
+                    (int) Math.floor(entry.z),
+                    entry.dimensionId);
+            line.append(Component.literal(" "));
+            line.append(buildActionChip(
+                    "xaero",
+                    buildClickEvent("/coordsbookmark xaero add " + quoteForBrigadier(entry.name)),
+                    "Export this bookmark to Xaero waypoints"));
             sendSystemMessage(line);
         }
 
@@ -938,6 +973,52 @@ public class CopyCoords implements ClientModInitializer {
         return 0;
     }
 
+    private int executeBookmarkXaeroAdd(String name) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
+
+        CopyCoordsDataStore.BookmarkEntry entry = dataStore.getBookmark(name);
+        if (entry == null) {
+            sendSystemMessage(Component.literal("Bookmark not found: " + name));
+            return 0;
+        }
+
+        try {
+            XaeroWaypointExporter.XaeroExportResult result =
+                    XaeroWaypointExporter.exportToCurrentTarget(Minecraft.getInstance(), entry);
+            sendSystemMessage(Component.literal(
+                    "Exported bookmark '" + entry.name + "' to Xaero waypoints in " + result.targetPath));
+            return Command.SINGLE_SUCCESS;
+        } catch (Exception e) {
+            sendSystemMessage(Component.literal("Failed to export bookmark to Xaero waypoints: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private int executeBookmarkXaeroAddToTarget(String name, String path) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
+
+        CopyCoordsDataStore.BookmarkEntry entry = dataStore.getBookmark(name);
+        if (entry == null) {
+            sendSystemMessage(Component.literal("Bookmark not found: " + name));
+            return 0;
+        }
+
+        try {
+            XaeroWaypointExporter.XaeroExportResult result =
+                    XaeroWaypointExporter.exportToTarget(entry, path);
+            sendSystemMessage(Component.literal(
+                    "Exported bookmark '" + entry.name + "' to Xaero target " + result.targetPath));
+            return Command.SINGLE_SUCCESS;
+        } catch (Exception e) {
+            sendSystemMessage(Component.literal("Failed to export bookmark to Xaero target: " + e.getMessage()));
+            return 0;
+        }
+    }
+
     private static Path resolveBookmarkTransferPath(String file, boolean forImport) {
         String trimmed = file == null ? "" : file.trim();
         if (trimmed.isEmpty()) {
@@ -997,6 +1078,216 @@ public class CopyCoords implements ClientModInitializer {
         HoverEvent hoverEvent = buildHoverEvent(Component.literal(hoverText));
         return Component.literal("[" + label + "]")
                 .withStyle(style -> applyEvents(style, clickEvent, hoverEvent));
+    }
+
+    private static void handleIncomingChatText(String text) {
+        if (config == null || !config.chatCoordinateDetectionEnabled || text == null || text.isBlank()) {
+            return;
+        }
+
+        String trimmed = text.trim();
+        if (shouldIgnoreIncomingChatText(trimmed)) {
+            return;
+        }
+
+        List<ChatCoordinateParser.DetectedCoordinate> detections = ChatCoordinateParser.detect(
+                trimmed,
+                CopyCoordsConfig.clampChatCoordinateDetectionMaxPerMessage(config.chatCoordinateDetectionMaxPerMessage));
+
+        for (ChatCoordinateParser.DetectedCoordinate detection : detections) {
+            sendSystemMessage(buildDetectedCoordinateMessage(detection));
+        }
+    }
+
+    private static boolean shouldIgnoreIncomingChatText(String text) {
+        return consumeRememberedLocalMessage(text)
+                || text.startsWith(DETECTED_COORDINATE_PREFIX)
+                || text.startsWith(DETECTED_CONVERTED_PREFIX)
+                || text.startsWith("Your current coordinates are:")
+                || text.startsWith("Converted coordinates:")
+                || text.startsWith("Copied coordinates to clipboard:")
+                || text.startsWith("Copied converted coordinates to clipboard:")
+                || text.startsWith("Copied coordinates with dimension to clipboard:");
+    }
+
+    private static void rememberLocalMessage(String text) {
+        if (text == null || text.isBlank()) {
+            return;
+        }
+
+        synchronized (RECENT_LOCAL_MESSAGES) {
+            RECENT_LOCAL_MESSAGES.addLast(text);
+            while (RECENT_LOCAL_MESSAGES.size() > RECENT_LOCAL_MESSAGE_LIMIT) {
+                RECENT_LOCAL_MESSAGES.removeFirst();
+            }
+        }
+    }
+
+    private static boolean consumeRememberedLocalMessage(String text) {
+        synchronized (RECENT_LOCAL_MESSAGES) {
+            return RECENT_LOCAL_MESSAGES.removeFirstOccurrence(text);
+        }
+    }
+
+    private static net.minecraft.network.chat.MutableComponent buildDetectedCoordinateMessage(
+            ChatCoordinateParser.DetectedCoordinate detection) {
+        String coordString = formatCoordinates(detection.x, detection.y, detection.z, detection.dimensionId);
+        String copyCommand = buildDetectedCopyCommand(detection.x, detection.y, detection.z, detection.dimensionId);
+        net.minecraft.network.chat.MutableComponent message = Component.literal(DETECTED_COORDINATE_PREFIX);
+        message.append(Component.literal(coordString)
+                .withStyle(style -> applyEvents(
+                        style.withInsertion(coordString),
+                        buildClickEvent(copyCommand),
+                        buildHoverEvent(Component.literal("Copy detected coordinates")))));
+        message.append(Component.literal(" "));
+        message.append(buildActionChip("copy", buildClickEvent(copyCommand), "Copy to clipboard and add to history"));
+        message.append(Component.literal(" "));
+        message.append(buildActionChip("insert", buildSuggestCommandEvent(coordString), "Insert detected coordinates into chat input"));
+        message.append(Component.literal(" "));
+        message.append(buildActionChip(
+                "bookmark",
+                buildSuggestCommandEvent(buildDetectedBookmarkSuggestion(detection.x, detection.y, detection.z, detection.dimensionId)),
+                "Insert a bookmark command for these coordinates"));
+        appendDetectedConvertChip(message, detection);
+        if (detection.dimensionId != null) {
+            appendMapLinks(
+                    message,
+                    (int) Math.floor(detection.x),
+                    (int) Math.floor(detection.y),
+                    (int) Math.floor(detection.z),
+                    detection.dimensionId);
+        }
+        return message;
+    }
+
+    private static void appendDetectedConvertChip(net.minecraft.network.chat.MutableComponent message,
+                                                  ChatCoordinateParser.DetectedCoordinate detection) {
+        String sourceDimensionId = detection.dimensionId;
+        if (sourceDimensionId == null) {
+            return;
+        }
+
+        if (sourceDimensionId.equals(OVERWORLD_ID)) {
+            message.append(Component.literal(" "));
+            message.append(buildActionChip(
+                    "to_nether",
+                    buildClickEvent(buildDetectedConvertCommand(sourceDimensionId, "nether", detection.x, detection.y, detection.z)),
+                    "Convert detected coordinates to Nether scale"));
+        } else if (sourceDimensionId.equals(NETHER_ID)) {
+            message.append(Component.literal(" "));
+            message.append(buildActionChip(
+                    "to_overworld",
+                    buildClickEvent(buildDetectedConvertCommand(sourceDimensionId, "overworld", detection.x, detection.y, detection.z)),
+                    "Convert detected coordinates to Overworld scale"));
+        }
+    }
+
+    private static String buildDetectedCopyCommand(double x, double y, double z, String dimensionId) {
+        return "/copycoords detected copy "
+                + ChatCoordinateParser.toCommandNumber(x) + " "
+                + ChatCoordinateParser.toCommandNumber(y) + " "
+                + ChatCoordinateParser.toCommandNumber(z) + " "
+                + encodeDetectedDimensionArgument(dimensionId);
+    }
+
+    private static String buildDetectedBookmarkSuggestion(double x, double y, double z, String dimensionId) {
+        return "/copycoords detected bookmark "
+                + ChatCoordinateParser.toCommandNumber(x) + " "
+                + ChatCoordinateParser.toCommandNumber(y) + " "
+                + ChatCoordinateParser.toCommandNumber(z) + " "
+                + encodeDetectedDimensionArgument(dimensionId) + " ";
+    }
+
+    private static String buildDetectedConvertCommand(String sourceDimensionId, String goal, double x, double y, double z) {
+        return "/copycoords detected convert "
+                + encodeDetectedDimensionArgument(sourceDimensionId) + " "
+                + goal + " "
+                + ChatCoordinateParser.toCommandNumber(x) + " "
+                + ChatCoordinateParser.toCommandNumber(y) + " "
+                + ChatCoordinateParser.toCommandNumber(z);
+    }
+
+    private static String encodeDetectedDimensionArgument(String dimensionId) {
+        return dimensionId == null || dimensionId.isBlank() ? DETECTED_UNKNOWN_DIMENSION_TOKEN : dimensionId;
+    }
+
+    private static String decodeDetectedDimensionArgument(String token) {
+        if (token == null || token.isBlank() || token.equalsIgnoreCase(DETECTED_UNKNOWN_DIMENSION_TOKEN)) {
+            return null;
+        }
+
+        String normalized = ChatCoordinateParser.normalizeDimensionHint(token);
+        return normalized == null ? token : normalized;
+    }
+
+    private int executeDetectedCopy(double x, double y, double z, String dimensionToken) {
+        String dimensionId = decodeDetectedDimensionArgument(dimensionToken);
+        String coordString = formatCoordinates(x, y, z, dimensionId);
+        return copyFormattedCoordinatesWithFeedback(
+                coordString,
+                (int) Math.floor(x),
+                (int) Math.floor(y),
+                (int) Math.floor(z),
+                dimensionId);
+    }
+
+    private int executeDetectedBookmark(double x, double y, double z, String dimensionToken, String name) {
+        if (!ensureDataStoreAvailable()) {
+            return 0;
+        }
+
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            sendSystemMessage(Component.literal("Bookmark name cannot be empty."));
+            return 0;
+        }
+
+        String dimensionId = decodeDetectedDimensionArgument(dimensionToken);
+        if (!dataStore.addBookmark(trimmed, x, y, z, dimensionId)) {
+            sendSystemMessage(Component.literal("Bookmark already exists: " + trimmed));
+            return 0;
+        }
+
+        sendSystemMessage(Component.literal("Bookmark added from detected coordinates: " + trimmed));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int executeDetectedConvert(String sourceToken, String goal, double x, double y, double z) {
+        String sourceDimensionId = decodeDetectedDimensionArgument(sourceToken);
+        String normalizedGoal = goal == null ? "" : goal.trim().toLowerCase(Locale.ROOT);
+
+        if (!normalizedGoal.equals("overworld") && !normalizedGoal.equals("nether")) {
+            sendSystemMessage(Component.translatable("message.copycoords.command.unknown_goal", goal));
+            return 0;
+        }
+
+        if (!OVERWORLD_ID.equals(sourceDimensionId) && !NETHER_ID.equals(sourceDimensionId)) {
+            sendSystemMessage(Component.literal("Detected coordinates can only be converted when the source dimension is Overworld or Nether."));
+            return 0;
+        }
+
+        double convertedX = x;
+        double convertedZ = z;
+        if (OVERWORLD_ID.equals(sourceDimensionId) && normalizedGoal.equals("nether")) {
+            convertedX = x / 8.0;
+            convertedZ = z / 8.0;
+        } else if (NETHER_ID.equals(sourceDimensionId) && normalizedGoal.equals("overworld")) {
+            convertedX = x * 8.0;
+            convertedZ = z * 8.0;
+        }
+
+        String targetDimensionId = getDimensionIdForGoal(normalizedGoal);
+        String out = formatCoordinates(convertedX, y, convertedZ, targetDimensionId);
+        int floorX = (int) Math.floor(convertedX);
+        int floorY = (int) Math.floor(y);
+        int floorZ = (int) Math.floor(convertedZ);
+        sendSystemMessage(buildCoordinateMessage(DETECTED_CONVERTED_PREFIX, out, floorX, floorY, floorZ, targetDimensionId));
+
+        if (config != null && config.copyConvertedToClipboard) {
+            return copyFormattedCoordinatesWithFeedback(out, floorX, floorY, floorZ, targetDimensionId);
+        }
+
+        return Command.SINGLE_SUCCESS;
     }
 
     private void postCoordinateMessage(String prefix, String coordString, int x, int y, int z, String dimensionId) {

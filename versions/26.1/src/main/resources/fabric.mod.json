@@ -19,7 +19,7 @@
   "depends": {
     "java": ">=25",
     "fabricloader": ">=0.18.4",
-    "minecraft": ">=26.1 <=26.1.1",
+    "minecraft": ">=26.1 <=26.1.2",
     "fabric-api": ">=0.145.1",
     "cloth-config": ">=26.1.154",
     "modmenu": ">=17.0.0"

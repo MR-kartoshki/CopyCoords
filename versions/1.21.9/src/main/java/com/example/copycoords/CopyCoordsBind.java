@@ -82,10 +82,6 @@ public class CopyCoordsBind {
         return keyMapping != null && keyMapping.isUnbound();
     }
 
-    public static boolean isInstantChatSendKeybindUnbound() {
-        return isKeyMappingUnbound(instantChatSendKeyBinding);
-    }
-
     @SuppressWarnings("null")
     private static void executeKeybindCopy(Minecraft minecraft) {
         net.minecraft.world.entity.player.Player player = minecraft.player;

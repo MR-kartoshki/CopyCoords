@@ -1,10 +1,12 @@
 {
+  "key.categories.copycoords": "CopyCoords",
   "key.category.copycoords.keybinds": "CopyCoords",
   "key.copycoords.copy": "Koordinaten Kopieren",
   "key.copycoords.copy_converted": "Konvertierte Koordinaten Kopieren",
   "key.copycoords.copy_with_dimension": "Koordinaten mit Dimension Kopieren",
   "key.copycoords.instant_chat_send": "Sofort im Chat senden",
   "title.copycoords.config": "CopyCoords Konfiguration",
+  "modmenu.descriptionTranslation.copycoords": "CopyCoords ist ein clientseitiges Fabric-Mod, mit dem du Koordinaten schneller kopieren, umrechnen und teilen kannst.",
   "option.copycoords.copyToClipboard": "Koordinaten in die Zwischenablage kopieren",
   "option.copycoords.copyToClipboard@Tooltip": "Wenn aktiviert, kopiert der Befehl /copycoords deine Koordinaten nach dem Absenden der Chatnachricht in die Systemzwischenablage.",
   "option.copycoords.copyConvertedToClipboard": "Konvertierte Koordinaten in die Zwischenablage kopieren",
@@ -21,7 +23,10 @@
   "option.copycoords.instantChatEnabled@Tooltip": "Wenn aktiviert, senden /cc und /copycoords ihre Koordinatenausgabe zusätzlich in den Server-Chat.",
   "option.copycoords.showInstantChatSendUnboundHint": "Hinweis bei unbelegter Instant-Senden-Taste anzeigen",
   "option.copycoords.showInstantChatSendUnboundHint@Tooltip": "Wenn aktiviert, wird einmal pro Sitzung ein Chathinweis angezeigt, wenn die Instant-Senden-Taste nicht belegt ist.",
-
+  "option.copycoords.chatCoordinateDetectionEnabled": "Koordinaten im Chat erkennen",
+  "option.copycoords.chatCoordinateDetectionEnabled@Tooltip": "Wenn aktiviert, durchsucht CopyCoords eingehende Chatnachrichten nach Koordinatentripeln und zeigt eine nachgelagerte Aktionszeile an.",
+  "option.copycoords.chatCoordinateDetectionMaxPerMessage": "Maximal erkannte Koordinatensätze pro Nachricht",
+  "option.copycoords.chatCoordinateDetectionMaxPerMessage@Tooltip": "Begrenzt, wie viele Aktionszeilen für erkannte Koordinaten CopyCoords für eine einzelne eingehende Nachricht anzeigt.",
   "message.copycoords.command.no_player": "Position kann nicht ausgelesen werden – kein Spieler geladen.",
   "message.copycoords.command.coords_printed": "Deine aktuellen Koordinaten sind: %s",
   "message.copycoords.command.copied": "Koordinaten in die Zwischenablage kopiert.",
@@ -34,5 +39,9 @@
   "message.copycoords.command.converted": "Konvertierte Koordinaten: %s",
   "message.copycoords.command.unknown_goal": "Unbekannte Zieldimension: %s (verwende overworld oder nether)",
   "message.copycoords.command.unsupported_dimension": "Koordinaten können in dieser Dimension nicht konvertiert werden (nur Oberwelt und Nether werden unterstützt).",
+  "message.copycoords.bookmark.exported": "Lesezeichen nach %s exportiert",
+  "message.copycoords.bookmark.export_failed": "Export der Lesezeichen fehlgeschlagen: %s",
+  "message.copycoords.bookmark.imported": "Lesezeichen aus %s importiert",
+  "message.copycoords.bookmark.import_failed": "Import der Lesezeichen fehlgeschlagen: %s",
   "message.copycoords.command.msg_failed": "Fehler beim Senden der Koordinaten an %s: %s"
 }

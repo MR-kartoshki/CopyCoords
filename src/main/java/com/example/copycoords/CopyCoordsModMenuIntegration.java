@@ -115,6 +115,25 @@ public class CopyCoordsModMenuIntegration implements ModMenuApi {
                     .setSaveConsumer(newValue -> CopyCoords.config.showInstantChatSendUnboundHint = newValue)
                     .build());
 
+            general.addEntry(entryBuilder.startBooleanToggle(
+                            Component.translatable("option.copycoords.chatCoordinateDetectionEnabled"),
+                            CopyCoords.config.chatCoordinateDetectionEnabled)
+                    .setDefaultValue(true)
+                    .setTooltip(Component.translatable("option.copycoords.chatCoordinateDetectionEnabled@Tooltip"))
+                    .setSaveConsumer(newValue -> CopyCoords.config.chatCoordinateDetectionEnabled = newValue)
+                    .build());
+
+            general.addEntry(entryBuilder.startIntSlider(
+                            Component.translatable("option.copycoords.chatCoordinateDetectionMaxPerMessage"),
+                            CopyCoords.config.chatCoordinateDetectionMaxPerMessage,
+                            CopyCoordsConfig.MIN_CHAT_DETECTIONS_PER_MESSAGE,
+                            CopyCoordsConfig.MAX_CHAT_DETECTIONS_PER_MESSAGE)
+                    .setDefaultValue(CopyCoordsConfig.DEFAULT_CHAT_DETECTIONS_PER_MESSAGE)
+                    .setTooltip(Component.translatable("option.copycoords.chatCoordinateDetectionMaxPerMessage@Tooltip"))
+                    .setSaveConsumer(newValue -> CopyCoords.config.chatCoordinateDetectionMaxPerMessage =
+                            CopyCoordsConfig.clampChatCoordinateDetectionMaxPerMessage(newValue))
+                    .build());
+
             ConfigCategory mapLinks = builder.getOrCreateCategory(Component.literal("Map Links"));
 
             mapLinks.addEntry(entryBuilder.startBooleanToggle(

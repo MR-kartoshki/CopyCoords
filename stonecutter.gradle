@@ -2,15 +2,47 @@ plugins {
     id 'dev.kikugie.stonecutter'
 }
 
-stonecutter.active "26.1.1"
+def versionOrder = { String a, String b ->
+    def left = a.tokenize('.').collect { it as int }
+    def right = b.tokenize('.').collect { it as int }
+    def maxParts = Math.max(left.size(), right.size())
+    for (int i = 0; i < maxParts; i++) {
+        int leftPart = i < left.size() ? left[i] : 0
+        int rightPart = i < right.size() ? right[i] : 0
+        if (leftPart != rightPart) {
+            return leftPart <=> rightPart
+        }
+    }
+    return 0
+}
 
-def allVersions = [
-    '1.19', '1.19.1', '1.19.2', '1.19.3', '1.19.4',
-    '1.20', '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6',
-    '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6', '1.21.7', '1.21.8',
-    '1.21.9', '1.21.10', '1.21.11',
-    '26.1', '26.1.1'
-]
+def allVersions = file('versions').listFiles()
+    ?.findAll { it.isDirectory() && new File(it, 'src').isDirectory() }
+    ?.collect { it.name }
+    ?.sort(versionOrder)
+
+if (!allVersions) {
+    throw new GradleException("No Stonecutter version directories found under ${file('versions')}")
+}
+
+stonecutter.active allVersions.last()
+
+def getCurrentChangelog = {
+    def changelog = rootProject.file("CHANGELOG.md")
+    if (!changelog.exists()) return ""
+
+    def lines = changelog.readLines()
+    def current = []
+    def started = false
+
+    for (line in lines) {
+        if (line.startsWith("## [") && started) break
+        if (line.startsWith("## [")) started = true
+        if (started) current.add(line)
+    }
+
+    current.join("\n")
+}
 
 // Aggregate task: builds all version JARs
 tasks.register("buildAllVersions") {
@@ -18,6 +50,16 @@ tasks.register("buildAllVersions") {
     description = "Build all Stonecutter version JARs"
     
     dependsOn allVersions.collect { ":${it}:build" }
+}
+
+tasks.register("writeCurrentChangelog") {
+    doLast {
+        def changelogContent = getCurrentChangelog()
+        def outputFile = rootProject.file("build/current-changelog.md")
+        outputFile.parentFile.mkdirs()
+        outputFile.text = changelogContent
+        println("Current changelog written to ${outputFile.path}")
+    }
 }
 
 

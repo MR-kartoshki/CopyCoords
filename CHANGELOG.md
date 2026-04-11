@@ -2,6 +2,30 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.15.0] - 2026-04-10
+
+### Added
+
+- Support for Minecraft `26.1.2`.
+- Automatic coordinate detection in incoming chat messages.
+  - Detects common coordinate formats such as `100 64 200`, `[100, 64, 200]`, and `X:100 Y:64 Z:200`.
+  - Shows a follow-up action line so detected coordinates can be copied, inserted into chat, bookmarked, or converted between Overworld and Nether when the source dimension is known.
+- New config options for chat coordinate detection:
+  - `Detect coordinates from chat`
+  - `Max detected coordinate sets per message`
+- New Localizations:
+  - New `LOLCAT` localization (`lol_us`).
+  - New `Pirate Speak` localization (`en_pt`).
+  - New `Shakespearean English` localization (`en_sh`).
+  - Also made the mod description translatable in Mod Menu and added translations for all shipped locales.
+- Xaero waypoint export for bookmarks.
+  - Use `/coordsbookmark xaero add <bookmark>` to export to the current Xaero world/server when CopyCoords can infer it.
+  - Use `/coordsbookmark xaero add <bookmark> target <path>` to export to a specific Xaero folder or waypoint file.
+
+### Removed
+
+- Removed the temporary `/copycoords status`, `/copycoords hintunbound`, and `/copycoords config showInstantChatSendUnboundHint` debug utility commands.
+
 ## [1.14.0] - 2026-04-06
 
 ### Added

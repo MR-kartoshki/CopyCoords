@@ -8,7 +8,7 @@ pluginManagement {
 
     resolutionStrategy {
         eachPlugin {
-            if (requested.id.id == 'net.fabricmc.fabric-loom') {
+            if (requested.id.id in ['net.fabricmc.fabric-loom', 'net.fabricmc.fabric-loom-remap', 'net.fabricmc.fabric-loom-companion']) {
                 useModule("net.fabricmc:fabric-loom:${requested.version}")
             }
         }
@@ -22,12 +22,35 @@ plugins {
 
 rootProject.name = 'copycoords-stonecutter'
 
+def versionOrder = { String a, String b ->
+    def left = a.tokenize('.').collect { it as int }
+    def right = b.tokenize('.').collect { it as int }
+    def maxParts = Math.max(left.size(), right.size())
+    for (int i = 0; i < maxParts; i++) {
+        int leftPart = i < left.size() ? left[i] : 0
+        int rightPart = i < right.size() ? right[i] : 0
+        if (leftPart != rightPart) {
+            return leftPart <=> rightPart
+        }
+    }
+    return 0
+}
+
+def allVersions = file('versions').listFiles()
+    ?.findAll { it.isDirectory() && new File(it, 'src').isDirectory() }
+    ?.collect { it.name }
+    ?.sort(versionOrder)
+
+if (!allVersions) {
+    throw new GradleException("No Stonecutter version directories found under ${file('versions')}")
+}
+
 stonecutter {
     kotlinController = false
     centralScript = 'build.gradle'
 
     create(rootProject) {
-        versions('26.1', '26.1.1')
-        vcsVersion = '26.1.1'
+        versions(*allVersions)
+        vcsVersion = allVersions.last()
     }
 }
