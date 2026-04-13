@@ -53,7 +53,22 @@ final class ChatCoordinateParser {
             return null;
         }
 
-        String normalized = raw.trim().toLowerCase(Locale.ROOT)
+        String compact = raw.trim().toLowerCase(Locale.ROOT);
+        if (compact.isEmpty() || compact.equals("unknown")) {
+            return null;
+        }
+
+        if (compact.contains("minecraft:overworld")) {
+            return OVERWORLD_ID;
+        }
+        if (compact.contains("minecraft:the_nether") || compact.contains("minecraft:the nether")) {
+            return NETHER_ID;
+        }
+        if (compact.contains("minecraft:the_end") || compact.contains("minecraft:the end")) {
+            return END_ID;
+        }
+
+        String normalized = compact
                 .replace('(', ' ')
                 .replace(')', ' ')
                 .replace('[', ' ')
@@ -63,17 +78,13 @@ final class ChatCoordinateParser {
                 .replaceAll("\\s+", " ")
                 .trim();
 
-        if (normalized.isEmpty() || normalized.equals("unknown")) {
-            return null;
-        }
-
         if (normalized.equals("minecraft:overworld") || normalized.equals("overworld")) {
             return OVERWORLD_ID;
         }
         if (normalized.equals("minecraft:the_nether") || normalized.equals("nether") || normalized.equals("the nether")) {
             return NETHER_ID;
         }
-        if (normalized.equals("minecraft:the_end") || normalized.equals("end")) {
+        if (normalized.equals("minecraft:the_end") || normalized.equals("end") || normalized.equals("the end")) {
             return END_ID;
         }
 

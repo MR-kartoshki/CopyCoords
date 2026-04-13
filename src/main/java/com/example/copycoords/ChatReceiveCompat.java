@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 
 final class ChatReceiveCompat {
     private static final String EVENTS_CLASS_NAME = "net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents";
+    private static final String EVENT_INTERFACE_CLASS_NAME = "net.fabricmc.fabric.api.event.Event";
     private static boolean registered = false;
 
     private ChatReceiveCompat() {
@@ -50,6 +51,7 @@ final class ChatReceiveCompat {
         }
 
         Class<?> listenerType = Class.forName(eventsClass.getName() + "$" + listenerTypeName);
+        Class<?> eventInterface = Class.forName(EVENT_INTERFACE_CLASS_NAME);
         InvocationHandler invocationHandler = (proxy, method, args) -> {
             if (method.getDeclaringClass() == Object.class) {
                 return switch (method.getName()) {
@@ -72,7 +74,7 @@ final class ChatReceiveCompat {
         };
 
         Object listener = Proxy.newProxyInstance(listenerType.getClassLoader(), new Class<?>[]{listenerType}, invocationHandler);
-        Method registerMethod = event.getClass().getMethod("register", Object.class);
+        Method registerMethod = eventInterface.getMethod("register", Object.class);
         registerMethod.invoke(event, listener);
         return true;
     }

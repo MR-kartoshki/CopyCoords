@@ -30,18 +30,33 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CopyCoords implements ClientModInitializer {
     public static CopyCoordsConfig config;
     public static CopyCoordsDataStore dataStore;
 
-    private static final String OVERWORLD_ID = Level.OVERWORLD.toString();
-    private static final String NETHER_ID = Level.NETHER.toString();
-    private static final String END_ID = Level.END.toString();
+    private static final String OVERWORLD_ID = "minecraft:overworld";
+    private static final String NETHER_ID = "minecraft:the_nether";
+    private static final String END_ID = "minecraft:the_end";
     private static final String DETECTED_COORDINATE_PREFIX = "Detected coordinates: ";
     private static final String DETECTED_CONVERTED_PREFIX = "Converted detected coordinates: ";
     private static final String DETECTED_UNKNOWN_DIMENSION_TOKEN = "unknown";
     private static final int RECENT_LOCAL_MESSAGE_LIMIT = 40;
+    private static final String COORD_NUMBER_PATTERN = "-?\\d+(?:\\.\\d+)?";
+    private static final String COORD_ARGUMENT_PATTERN = "(?:~(?:" + COORD_NUMBER_PATTERN + ")?|" + COORD_NUMBER_PATTERN + ")";
+    private static final Pattern BOOKMARK_ADD_XYZ_PATTERN = Pattern.compile(
+            "(?is)^(?<name>.+?)\\s+(?<coords>(?:(?<!\\w)x\\s*[:=]\\s*" + COORD_NUMBER_PATTERN
+                    + "\\s*[,; ]+y\\s*[:=]\\s*" + COORD_NUMBER_PATTERN
+                    + "\\s*[,; ]+z\\s*[:=]\\s*" + COORD_NUMBER_PATTERN + "))(?:\\s+(?<dimension>.+?))?\\s*$");
+    private static final Pattern BOOKMARK_ADD_BRACKET_PATTERN = Pattern.compile(
+            "(?is)^(?<name>.+?)\\s+(?<coords>\\[\\s*" + COORD_NUMBER_PATTERN
+                    + "\\s*,\\s*" + COORD_NUMBER_PATTERN
+                    + "\\s*,\\s*" + COORD_NUMBER_PATTERN + "\\s*\\])(?:\\s+(?<dimension>.+?))?\\s*$");
+    private static final Pattern BOOKMARK_ADD_SPACE_PATTERN = Pattern.compile(
+            "(?is)^(?<name>.+?)\\s+(?<x>" + COORD_ARGUMENT_PATTERN + ")\\s+(?<y>" + COORD_ARGUMENT_PATTERN
+                    + ")\\s+(?<z>" + COORD_ARGUMENT_PATTERN + ")(?:\\s+(?<dimension>.+?))?\\s*$");
     private static final Deque<String> RECENT_LOCAL_MESSAGES = new ArrayDeque<>();
 
     static void sendSystemMessage(Component message) {
@@ -558,7 +573,15 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     static String getDimensionId(Player player) {
-        return PlayerLevelCompat.getDimensionId(player);
+        return normalizeDimensionId(PlayerLevelCompat.getDimensionId(player));
+    }
+
+    static String normalizeDimensionId(String dimensionId) {
+        if (dimensionId == null) {
+            return null;
+        }
+        String normalized = ChatCoordinateParser.normalizeDimensionHint(dimensionId);
+        return normalized != null ? normalized : dimensionId;
     }
 
     static String getDimensionIdForGoal(String goal) {
@@ -569,6 +592,7 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     static String getDimensionNameFromId(String dimensionId) {
+        dimensionId = normalizeDimensionId(dimensionId);
         if (dimensionId == null) {
             return "Unknown";
         }
@@ -832,7 +856,7 @@ public class CopyCoords implements ClientModInitializer {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int executeBookmarkAdd(String name) {
+    private int executeBookmarkAdd(String input) {
         if (!ensureDataStoreAvailable()) {
             return 0;
         }
@@ -842,24 +866,131 @@ public class CopyCoords implements ClientModInitializer {
             return 0;
         }
 
-        String trimmed = name.trim();
-        if (trimmed.isEmpty()) {
+        BookmarkAddRequest request = parseBookmarkAddRequest(input, player);
+        if (request == null || request.name.isEmpty()) {
             sendSystemMessage(Component.literal("Bookmark name cannot be empty."));
             return 0;
         }
 
-        double x = player.getX();
-        double y = player.getY();
-        double z = player.getZ();
-        String dimensionId = getDimensionId(player);
-
-        if (!dataStore.addBookmark(trimmed, x, y, z, dimensionId)) {
-            sendSystemMessage(Component.literal("Bookmark already exists: " + trimmed));
+        if (!dataStore.addBookmark(request.name, request.x, request.y, request.z, request.dimensionId)) {
+            sendSystemMessage(Component.literal("Bookmark already exists: " + request.name));
             return 0;
         }
 
-        sendSystemMessage(Component.literal("Bookmark added: " + trimmed));
+        sendSystemMessage(Component.literal("Bookmark added: " + request.name));
         return Command.SINGLE_SUCCESS;
+    }
+
+    private BookmarkAddRequest parseBookmarkAddRequest(String input, Player player) {
+        String trimmed = input == null ? "" : input.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        BookmarkAddRequest explicitCoords = tryParseBookmarkAddRequest(trimmed, player, BOOKMARK_ADD_XYZ_PATTERN);
+        if (explicitCoords != null) {
+            return explicitCoords;
+        }
+
+        explicitCoords = tryParseBookmarkAddRequest(trimmed, player, BOOKMARK_ADD_BRACKET_PATTERN);
+        if (explicitCoords != null) {
+            return explicitCoords;
+        }
+
+        explicitCoords = tryParseBookmarkAddSpaceRequest(trimmed, player);
+        if (explicitCoords != null) {
+            return explicitCoords;
+        }
+
+        return new BookmarkAddRequest(trimmed, player.getX(), player.getY(), player.getZ(), getDimensionId(player));
+    }
+
+    private BookmarkAddRequest tryParseBookmarkAddRequest(String input, Player player, Pattern pattern) {
+        Matcher matcher = pattern.matcher(input);
+        if (!matcher.matches()) {
+            return null;
+        }
+
+        String name = matcher.group("name").trim();
+        if (name.isEmpty()) {
+            return null;
+        }
+
+        String dimensionId = parseBookmarkAddDimension(matcher.group("dimension"), getDimensionId(player));
+        if (dimensionId == null && matcher.group("dimension") != null) {
+            return null;
+        }
+
+        List<ChatCoordinateParser.DetectedCoordinate> detections = ChatCoordinateParser.detect(matcher.group("coords"), 1);
+        if (detections.isEmpty()) {
+            return null;
+        }
+
+        ChatCoordinateParser.DetectedCoordinate detection = detections.get(0);
+        return new BookmarkAddRequest(name, detection.x, detection.y, detection.z, dimensionId);
+    }
+
+    private BookmarkAddRequest tryParseBookmarkAddSpaceRequest(String input, Player player) {
+        Matcher matcher = BOOKMARK_ADD_SPACE_PATTERN.matcher(input);
+        if (!matcher.matches()) {
+            return null;
+        }
+
+        String name = matcher.group("name").trim();
+        if (name.isEmpty()) {
+            return null;
+        }
+
+        String dimensionId = parseBookmarkAddDimension(matcher.group("dimension"), getDimensionId(player));
+        if (dimensionId == null && matcher.group("dimension") != null) {
+            return null;
+        }
+
+        double x = parseCoordinate(matcher.group("x"), player.getX());
+        double y = parseCoordinate(matcher.group("y"), player.getY());
+        double z = parseCoordinate(matcher.group("z"), player.getZ());
+        if (!isValidBookmarkCoordinate(x, y, z)) {
+            return null;
+        }
+
+        return new BookmarkAddRequest(name, x, y, z, dimensionId);
+    }
+
+    private String parseBookmarkAddDimension(String rawDimension, String defaultDimensionId) {
+        if (rawDimension == null || rawDimension.isBlank()) {
+            return defaultDimensionId;
+        }
+
+        String normalized = ChatCoordinateParser.normalizeDimensionHint(rawDimension);
+        if (normalized != null) {
+            return normalized;
+        }
+
+        String trimmed = rawDimension.trim();
+        return trimmed.contains(":") ? trimmed : null;
+    }
+
+    private static boolean isValidBookmarkCoordinate(double x, double y, double z) {
+        return Math.abs(x) <= 30_000_000
+                && Math.abs(z) <= 30_000_000
+                && y >= -2048
+                && y <= 2048;
+    }
+
+    private static final class BookmarkAddRequest {
+        final String name;
+        final double x;
+        final double y;
+        final double z;
+        final String dimensionId;
+
+        private BookmarkAddRequest(String name, double x, double y, double z, String dimensionId) {
+            this.name = name;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.dimensionId = dimensionId;
+        }
     }
 
     private int executeBookmarkList() {
@@ -1352,6 +1483,7 @@ public class CopyCoords implements ClientModInitializer {
     }
 
     private static String getMapWorldName(String dimensionId) {
+        dimensionId = normalizeDimensionId(dimensionId);
         if (dimensionId == null) {
             return "world";
         }

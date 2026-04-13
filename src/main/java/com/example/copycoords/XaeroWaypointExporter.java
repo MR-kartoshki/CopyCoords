@@ -199,7 +199,7 @@ final class XaeroWaypointExporter {
                 throw new IllegalArgumentException("Bookmark entry is null.");
             }
 
-            String dimensionId = entry.dimensionId;
+            String dimensionId = CopyCoords.normalizeDimensionId(entry.dimensionId);
             String dimensionFolder;
             if (dimensionId == null || dimensionId.equals("minecraft:overworld")) {
                 dimensionFolder = "dim%0";

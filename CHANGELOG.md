@@ -2,6 +2,20 @@
 
 All notable changes to CopyCoords will be documented in this file.
 
+## [1.15.1] - 2026-04-13
+
+### Added
+
+- `/coordsbookmark add <name> <coords>` and `/coordbookmark add <name> <coords>` now support explicit coordinates when creating bookmarks.
+  - Accepts space-separated coordinates like `100 64 200`.
+  - Accepts bracket coordinates like `[100, 64, 200]`.
+  - Accepts `X:100 Y:64 Z:200` style coordinates.
+  - Keeps the old `add <name>` behavior and still uses your current position when coordinates are omitted.
+
+### Fixed
+
+- Fixed the bookmark Xaero export action failing for bookmarks that stored equivalent dimension IDs in legacy or raw forms instead of Xaero's expected Overworld, Nether, or End IDs.
+
 ## [1.15.0] - 2026-04-10
 
 ### Added
