@@ -52,6 +52,13 @@ tasks.register("buildAllVersions") {
     dependsOn allVersions.collect { ":${it}:build" }
 }
 
+tasks.register("cleanRun") {
+    group = "build"
+    description = "Delete all Stonecutter Minecraft run directories"
+
+    dependsOn allVersions.collect { ":${it}:cleanRun" }
+}
+
 tasks.register("writeCurrentChangelog") {
     doLast {
         def changelogContent = getCurrentChangelog()

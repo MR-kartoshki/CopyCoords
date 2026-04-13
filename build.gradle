@@ -428,6 +428,14 @@ tasks.named("clean").configure {
     delete file("bin")
 }
 
+if (project != rootProject) {
+    tasks.register("cleanRun", Delete) {
+        group = "build"
+        description = "Delete the Loom run directory for Minecraft ${activeVersion}"
+        delete layout.projectDirectory.dir("run")
+    }
+}
+
 // Version bump helpers.
 def bumpVersion(String part) {
     def propsFile = rootProject.file("gradle.properties")

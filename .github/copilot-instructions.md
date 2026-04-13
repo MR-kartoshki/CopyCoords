@@ -8,6 +8,7 @@ Use the Gradle wrapper from the repository root. On Windows use `.\gradlew.bat .
 - Full version-matrix build: `.\gradlew.bat buildAllVersions`
 - Build one Minecraft target: `.\gradlew.bat :<mc-version>:build`
 - Run one Minecraft target in dev: `.\gradlew.bat :<mc-version>:runClient`
+- Delete all Minecraft dev run data: `.\gradlew.bat cleanRun`
 - Test task: `.\gradlew.bat test`
 - Write the current changelog section used for releases: `.\gradlew.bat writeCurrentChangelog`
 
