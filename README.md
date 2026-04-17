@@ -6,7 +6,13 @@
 
 [![Modrinth](https://img.shields.io/modrinth/dt/copycoordsmod?color=00AF5C&label=Downloads&logo=modrinth)](https://modrinth.com/mod/copycoordsmod)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
-[![GitHub Release](https://img.shields.io/github/v/release/MR-kartoshki/copycoords)](https://github.com/MR-kartoshki/copycoords/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/MR-kartoshki/copycoords)](https://github.com/MR-kartoshki/copycoords/releases/latest)  
+![Issues](https://img.shields.io/github/issues-raw/MR-kartoshki/CopyCoords?color=c78aff&label=issues&style=for-the-badge)
+![Pull Requests](https://img.shields.io/github/issues-pr-raw/MR-kartoshki/CopyCoords?color=c78aff&label=PRs&style=for-the-badge)
+![Contributors](https://img.shields.io/github/contributors/MR-kartoshki/CopyCoords?color=c78aff&label=contributors&style=for-the-badge)
+![Lines](https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/MR-kartoshki/CopyCoords/badge?style=flat&logoColor=white&color=c78aff&style=for-the-badge)
+![Commit Activity](https://img.shields.io/github/commit-activity/m/MR-kartoshki/CopyCoords?color=c78aff&label=commits&style=for-the-badge)
+![Last Commit](https://img.shields.io/github/last-commit/MR-kartoshki/CopyCoords?color=c78aff&label=last%20commit&style=for-the-badge)
 
 </div>
 
