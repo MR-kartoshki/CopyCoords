@@ -13,6 +13,7 @@
 ![Lines](https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/MR-kartoshki/CopyCoords/badge?style=flat&logoColor=white&color=c78aff&style=for-the-badge)
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/MR-kartoshki/CopyCoords?color=c78aff&label=commits&style=for-the-badge)
 ![Last Commit](https://img.shields.io/github/last-commit/MR-kartoshki/CopyCoords?color=c78aff&label=last%20commit&style=for-the-badge)
+[![Support Me](https://img.shields.io/badge/Support%20Me-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/MRkartoshki)
 
 </div>
 
